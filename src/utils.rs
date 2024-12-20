@@ -1,4 +1,4 @@
-use std::{cell::RefCell, marker::PhantomData, sync::Mutex};
+use std::{cell::RefCell, sync::Mutex};
 
 #[allow(unused)]
 pub struct ThreadLock<T>{

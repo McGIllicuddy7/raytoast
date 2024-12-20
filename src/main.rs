@@ -1,5 +1,7 @@
+use raylib::{color, prelude::RaylibDraw};
+
 pub mod runtime;
 mod utils;
 fn main(){
-    runtime::run();
+    runtime::run(&||{println!("did a thing")}, &||{}, &|handle|{handle.draw_text("hey toast i love you", 400, 500, 24, color::Color::PINK);});
 }
