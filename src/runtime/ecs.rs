@@ -1,7 +1,13 @@
 use std::sync::{RwLock, RwLockReadGuard};
 
+#[allow(unused)]
 pub trait Entity:Send+Sync {
-    fn on_tick(&mut self, delta_time:f32, id:usize);
+    fn on_tick(&mut self, delta_time:f32, id:usize){
+
+    }
+    fn on_render(&self){
+
+    }
 }  
 
 pub struct EntityRef<'a>{
