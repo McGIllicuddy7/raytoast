@@ -1,5 +1,5 @@
-use raylib::{color::{self, Color}, math::{Vector3, Vector4}, prelude::RaylibDraw};
-use runtime::{default_components::{MeshComp, TransformComp}, ecs::Entity, get_base_shader, run};
+use raylib::{color::{Color}, math::{Vector3, Vector4}, prelude::RaylibDraw};
+use runtime::{default_components::{MeshComp, TransformComp}, ecs::Entity, get_base_shader};
 
 pub mod runtime;
 mod utils;

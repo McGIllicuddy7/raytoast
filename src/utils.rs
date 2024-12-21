@@ -138,7 +138,7 @@ pub fn QuatToMat(q:Quaternion)->Matrix
     result.m9 = bc - ad;
     result.m10 = 1.0 - a2 - b2;
 
-    return result;
+    result
 }
 
 pub fn transform_to_matrix(trans:Transform)->Matrix{
@@ -146,7 +146,7 @@ pub fn transform_to_matrix(trans:Transform)->Matrix{
     let rot = trans.rotation;
     let scale  = trans.scale;
     let locmat = raylib::math::Matrix::translate(loc.x, loc.y, loc.z);
-    let rotmat = QuatToMat(rot.into());
+    let rotmat = QuatToMat(rot);
     let scalemat = raylib::math::Matrix::scale(scale.x, scale.y, scale.z);
     locmat*rotmat*scalemat
 }

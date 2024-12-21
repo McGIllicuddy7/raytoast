@@ -3,7 +3,7 @@ use std::sync::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use default_components::{MeshComp, PhysicsComp, TransformComp};
 use ecs::{Entity, EntityRef};
 use raylib::{
-    camera::Camera, color, ffi::{BeginDrawing, DrawMesh, DrawText, EndDrawing, LoadMaterialDefault}, math::Vector3, models::{Mesh, RaylibMesh}, prelude::{RaylibDraw, RaylibDrawHandle}, shaders::Shader, texture::Texture2D, RaylibHandle, RaylibThread
+    camera::Camera, color, ffi::{DrawMesh, LoadMaterialDefault}, math::Vector3, models::{Mesh, RaylibMesh}, prelude::{RaylibDraw, RaylibDrawHandle}, shaders::Shader, texture::Texture2D, RaylibHandle, RaylibThread
 };
 
 use crate::utils::{self, Resource, ThreadLock};
@@ -253,7 +253,7 @@ pub fn create_entity(mut entity: Box<dyn Entity + Send + Sync>) -> Option<u32> {
 
 pub fn get_physics_comp(id:u32)->Option<PhysicsComp>{
     if let Ok(m) = RT.physics_comps.read(){
-        m.get(id as usize).map(|i| *i)
+        m.get(id as usize).copied()
     } else{
         None
     }
@@ -261,7 +261,7 @@ pub fn get_physics_comp(id:u32)->Option<PhysicsComp>{
 
 pub fn get_mesh_comp(id:u32)->Option<MeshComp>{
     if let Ok(m) = RT.mesh_comps.read(){
-        m.get(id as usize).map(|i| *i)
+        m.get(id as usize).copied()
     } else{
         None
     } 
@@ -269,7 +269,7 @@ pub fn get_mesh_comp(id:u32)->Option<MeshComp>{
 
 pub fn get_transform_comp(id:u32)->Option<TransformComp>{
     if let Ok(m) = RT.transform_comps.read(){
-        m.get(id as usize).map(|i| *i)
+        m.get(id as usize).copied()
     } else{
         None
     }

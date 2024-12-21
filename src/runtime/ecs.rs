@@ -1,6 +1,6 @@
 use std::sync::{RwLock, RwLockReadGuard};
 
-use raylib::{math::{BoundingBox, Vector3}, prelude::RaylibDrawHandle};
+use raylib::prelude::RaylibDrawHandle;
 
 use super::default_components::{MeshComp, PhysicsComp, TransformComp};
 
