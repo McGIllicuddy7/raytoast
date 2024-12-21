@@ -3,7 +3,7 @@ use std::sync::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use default_components::{MeshComp, PhysicsComp, TransformComp};
 use ecs::{Entity, EntityRef};
 use raylib::{
-    color, models::Mesh, prelude::{RaylibDraw, RaylibDrawHandle}, shaders::{Shader}, texture::Texture2D, RaylibHandle, RaylibThread
+    color, models::Mesh, prelude::{RaylibDraw, RaylibDrawHandle}, shaders::Shader, texture::Texture2D, RaylibHandle, RaylibThread
 };
 
 use crate::utils::{Resource, ThreadLock};
@@ -47,7 +47,7 @@ impl GraphicsResources {
     pub fn delete_mesh(&mut self, id: u32) -> bool {
         self.meshes.destroy(id as usize)
     }
-    
+
     pub fn get_shader(&self, id:usize)->Option<&Shader>{
         self.shaders.get(id)
     }
@@ -122,7 +122,7 @@ impl Runtime {
         for i in ents.iter() {
             let mut ent_opt = i.write().expect("works");
             if let Some(ent) = ent_opt.as_mut() {
-                ent.on_tick(delta_time, id);
+                ent.on_tick(delta_time);
             }
             id += 1;
         }
@@ -192,11 +192,12 @@ pub fn destroy_entity(id: u32) {
     m.push(id);
 }
 
-pub fn create_entity(entity: Box<dyn Entity + Send + Sync>) -> Option<u32> {
+pub fn create_entity(mut entity: Box<dyn Entity + Send + Sync>) -> Option<u32> {
     if let Ok(ents) = RT.entities.read() {
         for i in 0..ents.len() {
             if let Ok(mut ent) = ents[i].write() {
                 if ent.is_none() {
+                    entity.as_mut().on_init(i as u32);
                     *ent = Some(entity);
                     return Some(i as u32);
                 }
@@ -208,3 +209,26 @@ pub fn create_entity(entity: Box<dyn Entity + Send + Sync>) -> Option<u32> {
     None
 }
 
+pub fn get_physics_comp(id:u32)->Option<PhysicsComp>{
+    if let Ok(m) = RT.physics_comps.read(){
+        m.get(id as usize).map(|i| *i)
+    } else{
+        None
+    }
+}
+
+pub fn get_mesh_comp(id:u32)->Option<MeshComp>{
+    if let Ok(m) = RT.mesh_comps.read(){
+        m.get(id as usize).map(|i| *i)
+    } else{
+        None
+    } 
+}
+
+pub fn get_transform_comp(id:u32)->Option<TransformComp>{
+    if let Ok(m) = RT.transform_comps.read(){
+        m.get(id as usize).map(|i| *i)
+    } else{
+        None
+    }
+}

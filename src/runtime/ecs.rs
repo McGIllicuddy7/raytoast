@@ -7,28 +7,25 @@ use super::default_components::{MeshComp, PhysicsComp, TransformComp};
 
 #[allow(unused)]
 pub trait Entity:Send+Sync {
-    fn on_tick(&mut self, delta_time:f32, id:u32){
+    fn on_init(&mut self, id:u32){
+        
+    }
+    fn on_tick(&mut self, delta_time:f32){
 
     }
     fn on_render(&self, handle:&mut RaylibDrawHandle){
 
     }
-    fn get_collision(&self)->Option<BoundingBox>{
-        None
-    }
     fn get_transform(&self)->Option<TransformComp>{
-        None
+        super::get_transform_comp(self.get_id()?)
     }
     fn get_mesh(&self)->Option<MeshComp>{
-        None
+        super::get_mesh_comp(self.get_id()?)
     }
     fn get_physics(&self)->Option<PhysicsComp>{
-        None
+        super::get_physics_comp(self.get_id()?)
     }
-    fn get_health(&self)->Option<usize>{
-        None
-    }
-    fn get_velocty(&self)->Option<Vector3>{
+    fn get_id(&self)->Option<u32>{
         None
     }
 
