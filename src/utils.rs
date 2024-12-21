@@ -58,7 +58,7 @@ impl <T> ThreadLock<T>{
 
 #[allow(unused)]
 pub struct Resource<T>{
-    values:Vec<Option<T>>,
+    pub values:Vec<Option<T>>,
 }
 impl <T>Resource<T>{
     #[allow(unused)]
