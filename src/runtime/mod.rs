@@ -1,12 +1,9 @@
-use std::{
-    sync::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard},
-    thread::Thread,
-};
+use std::sync::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 use default_components::{MeshComp, PhysicsComp, TransformComp};
 use ecs::{Entity, EntityRef};
 use raylib::{
-    color, ffi::Transform, models::{Mesh, WeakMaterial}, prelude::{RaylibDraw, RaylibDrawHandle}, shaders::{self, Shader}, texture::Texture2D, RaylibHandle, RaylibThread
+    color, models::Mesh, prelude::{RaylibDraw, RaylibDrawHandle}, shaders::{Shader}, texture::Texture2D, RaylibHandle, RaylibThread
 };
 
 use crate::utils::{Resource, ThreadLock};
@@ -18,6 +15,12 @@ pub struct GraphicsResources {
     pub textures:Resource<Texture2D>,
     pub meshes: Resource<Mesh>,
 }
+impl Default for GraphicsResources {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl GraphicsResources {
     pub const fn new() -> Self {
         Self {
@@ -64,6 +67,12 @@ pub struct Runtime {
     pub mesh_comps: RwLock<Resource<MeshComp>>,
     pub graphics_resources: ThreadLock<GraphicsResources>,
 }
+impl Default for Runtime {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Runtime {
     pub const fn new() -> Self {
         Self {
@@ -89,14 +98,14 @@ impl Runtime {
         let mut meshs = self.mesh_comps.write().expect("msg");
         meshs.reserve(reserve_count);
     }
-    pub fn read_entities<'a>(
-        &'a self,
-    ) -> RwLockReadGuard<'a, Vec<RwLock<Option<Box<dyn Entity + Send + Sync>>>>> {
+    pub fn read_entities(
+        &self,
+    ) -> RwLockReadGuard<'_, Vec<RwLock<Option<Box<dyn Entity + Send + Sync>>>>> {
         self.entities.read().expect("works")
     }
-    pub fn write_entities<'a>(
-        &'a self,
-    ) -> RwLockWriteGuard<'a, Vec<RwLock<Option<Box<dyn Entity + Send + Sync>>>>> {
+    pub fn write_entities(
+        &self,
+    ) -> RwLockWriteGuard<'_, Vec<RwLock<Option<Box<dyn Entity + Send + Sync>>>>> {
         self.entities.write().expect("works")
     }
     pub fn run_tick(&self, delta_time: f32, on_tick: &dyn Fn()) {
@@ -159,7 +168,7 @@ static RT: Runtime = Runtime::new();
 pub fn run(setup: &dyn Fn(), on_tick: &dyn Fn(), on_draw: &dyn Fn(&mut RaylibDrawHandle)) {
     RT.run(setup, on_tick, on_draw);
 }
-pub fn get_entity<'a>(id: &'a u32) -> Option<EntityRef<'a>> {
+pub fn get_entity(id: &u32) -> Option<EntityRef<'_>> {
     if let Ok(ents) = RT.entities.read() {
         if *id as usize >= ents.len() {
             return None;

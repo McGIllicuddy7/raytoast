@@ -14,42 +14,38 @@ impl <T> ThreadLock<T>{
     }
 
     #[allow(unused)]
-    pub fn get<'a>(&'a self)->Option<std::cell::Ref<'a, T>>{
+    pub fn get(&self)->Option<std::cell::Ref<'_, T>>{
         let mut t = self.thread_id.lock().expect("msg");
         match  t.as_ref() {
             None=>{      *t = Some(std::thread::Thread::id(&std::thread::current()));       if let Ok(out) = self.cell.try_borrow(){
-                return Some(out);
+                Some(out)
             } else{
-                return None;
+                None
             }}
             Some(id)=>{
                 if *id != std::thread::Thread::id(&std::thread::current()){
-                    return None;
+                    None
+                } else if let Ok(out) = self.cell.try_borrow(){
+                    Some(out)
                 } else{
-                    if let Ok(out) = self.cell.try_borrow(){
-                        return Some(out);
-                    } else{
-                        return None;
-                    }
+                    None
                 }
             }
         }
     }
 
     #[allow(unused)]
-    pub fn get_mut<'a>(&'a self)->Option<std::cell::RefMut<'a, T>>{
+    pub fn get_mut(&self)->Option<std::cell::RefMut<'_, T>>{
         let mut t = self.thread_id.lock().expect("msg");
         match  t.as_ref() {
-            None=>{      *t = Some(std::thread::Thread::id(&std::thread::current())); return None;}
+            None=>{      *t = Some(std::thread::Thread::id(&std::thread::current())); None}
             Some(id)=>{
                 if *id != std::thread::Thread::id(&std::thread::current()){
-                    return None;
+                    None
+                } else if let Ok(out) = self.cell.try_borrow_mut(){
+                    Some(out)
                 } else{
-                    if let Ok(out) = self.cell.try_borrow_mut(){
-                        return Some(out);
-                    } else{
-                        return None;
-                    }
+                    None
                 }
             }
         }
@@ -60,6 +56,12 @@ impl <T> ThreadLock<T>{
 pub struct Resource<T>{
     pub values:Vec<Option<T>>,
 }
+impl<T> Default for Resource<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl <T>Resource<T>{
     #[allow(unused)]
     pub const fn new()->Self{
@@ -84,11 +86,11 @@ impl <T>Resource<T>{
             return false;
         }
         self.values[id] = None;
-        return true;
+        true
     }
     
     #[allow(unused)]
-    pub fn get<'a>(&'a self, id:usize)->Option<&'a T>{
+    pub fn get(&self, id:usize)->Option<&T>{
         if id>= self.values.len(){
             return None;
         }

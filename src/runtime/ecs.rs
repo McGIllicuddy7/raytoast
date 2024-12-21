@@ -40,6 +40,6 @@ pub struct EntityRef<'a>{
 impl <'a>EntityRef<'a>{
     #[allow(unused)]
     pub fn get(&self) ->&'a dyn Entity{
-        return self.values.1;
+        self.values.1
     }
 }
