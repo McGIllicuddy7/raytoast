@@ -232,3 +232,4 @@ pub fn get_transform_comp(id:u32)->Option<TransformComp>{
         None
     }
 }
+
