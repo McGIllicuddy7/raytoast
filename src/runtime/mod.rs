@@ -1,16 +1,38 @@
-use std::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
+use std::sync::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
+use default_components::{MeshComp, PhysicsComp, TransformComp};
 use ecs::{Entity, EntityRef};
-use raylib::{color, prelude::{RaylibDraw, RaylibDrawHandle}, RaylibHandle, RaylibThread};
+use raylib::{color, ffi::Transform, models::Mesh, prelude::{RaylibDraw, RaylibDrawHandle}, RaylibHandle, RaylibThread};
+
+use crate::utils::{Resource, ThreadLock};
 
 pub mod default_components;
 pub mod ecs;
 pub struct Runtime{
     pub entities: RwLock<Vec<RwLock<Option<Box<dyn Entity+Send+Sync>>>>>, 
+    pub failed_to_create:Mutex<bool>,
+    pub destroy_queue:Mutex<Vec<u32>>, 
+    pub transform_comps:RwLock<Resource<TransformComp>>,
+    pub physics_comps:RwLock<Resource<PhysicsComp>>,
+    pub mesh_comps:RwLock<Resource<MeshComp>>, 
 }
 impl Runtime{
     pub const fn new()->Self{
-        Self { entities: RwLock::new(Vec::new()) }
+        Self { entities: RwLock::new(Vec::new()),failed_to_create:Mutex::new(true), destroy_queue:Mutex::new(Vec::new()), physics_comps:RwLock::new(Resource::new()), mesh_comps:RwLock::new(Resource::new()), transform_comps:RwLock::new(Resource::new())}
+    }
+    fn reserve_slots(&self){
+        let mut ents = self.entities.write().expect("msg");
+        let reserve_count = 1000;
+        for _ in 0..reserve_count{
+            ents.push(RwLock::new(None));
+        }
+        let mut tras = self.transform_comps.write().expect("msg");
+        tras.reserve(reserve_count);
+        let mut phys = self.physics_comps.write().expect("msg");
+        phys.reserve(reserve_count);
+        let mut meshs = self.mesh_comps.write().expect("msg");
+        meshs.reserve(reserve_count);
+    
     }
     pub fn read_entities<'a>(&'a self)->RwLockReadGuard<'a, Vec<RwLock<Option<Box<dyn Entity+Send+Sync>>>>>{
         self.entities.read().expect("works")
@@ -19,6 +41,13 @@ impl Runtime{
         self.entities.write().expect("works")
     }
     pub fn run_tick(&self, delta_time:f32, on_tick:&dyn Fn()){
+        {
+            let mut lck = self.failed_to_create.lock().expect("msg");
+            if *lck{
+                self.reserve_slots();
+                *lck = false;
+            }
+        }
         let ents = self.read_entities();
         let mut id = 0;
         on_tick();
@@ -33,11 +62,18 @@ impl Runtime{
     pub fn run_render(&self,handle:&mut RaylibHandle, thread:&mut RaylibThread, on_draw:&dyn Fn(&mut RaylibDrawHandle)){
         let mut draw = handle.begin_drawing(thread);
         draw.clear_background(color::Color::BLACK);
+        let rd = self.entities.read().expect("msg");
+        for i in rd.iter(){
+            if let Some(j) = i.read().expect("msg").as_ref(){
+                j.on_render(&mut draw);
+            }
+        }
         on_draw(&mut draw);
         
     }
     pub fn run(&self, setup:&dyn Fn(), on_tick:&dyn Fn(), on_draw:&dyn Fn(&mut RaylibDrawHandle)){
         let (mut handle, mut thread) = raylib::prelude::RaylibBuilder::default().size(1024, 1024).title("raytoast").vsync().build();
+        self.reserve_slots();
         setup();
         while !handle.window_should_close(){
             self.run_tick(handle.get_frame_time(), on_tick);
@@ -53,6 +89,9 @@ pub fn run(setup:&dyn Fn(), on_tick:&dyn Fn(), on_draw:&dyn Fn(&mut RaylibDrawHa
 }
 pub fn get_entity<'a>(id:&'a u32)->Option<EntityRef<'a>>{
     if let Ok(ents) = RT.entities.read(){
+        if *id as usize >=ents.len(){
+            return None;
+        }
         if let Ok(r1) = ents[*id as usize].read().as_ref(){
             if let Some(r2) = r1.as_ref(){
                 let hack = r2.as_ref() as *const dyn Entity;
@@ -65,4 +104,23 @@ pub fn get_entity<'a>(id:&'a u32)->Option<EntityRef<'a>>{
     None
 }
 
-pub fn destroy_entity(id:u32){}
+pub fn destroy_entity(id:u32){
+    let mut m = RT.destroy_queue.lock().expect("msg");
+    m.push(id);
+}
+
+pub fn create_entity(entity:Box<dyn Entity+Send+Sync>)->Option<u32>{
+    if let Ok(ents) = RT.entities.read(){
+        for i in 0..ents.len(){
+            if let Ok(mut ent) = ents[i].write(){
+                if ent.is_none(){
+                    *ent = Some(entity);
+                    return Some(i as u32) ;
+                }
+            }
+        }
+    }
+    let mut m = RT.failed_to_create.lock().expect("not poisoned");
+    *m = true;
+    None
+}

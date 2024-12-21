@@ -94,4 +94,11 @@ impl <T>Resource<T>{
         }
         return self.values[id].as_ref();
     }
+
+    #[allow(unused)]
+    pub fn reserve(&mut self, count:usize){
+        for _ in 0..count{
+            self.values.push(None);
+        }
+    }
 }
