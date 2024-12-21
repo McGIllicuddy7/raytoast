@@ -3,10 +3,10 @@ use std::sync::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use default_components::{MeshComp, PhysicsComp, TransformComp};
 use ecs::{Entity, EntityRef};
 use raylib::{
-    color, models::Mesh, prelude::{RaylibDraw, RaylibDrawHandle}, shaders::Shader, texture::Texture2D, RaylibHandle, RaylibThread
+    camera::Camera, color, ffi::{BeginDrawing, DrawMesh, DrawText, EndDrawing, LoadMaterialDefault}, math::Vector3, models::{Mesh, RaylibMesh}, prelude::{RaylibDraw, RaylibDrawHandle}, shaders::Shader, texture::Texture2D, RaylibHandle, RaylibThread
 };
 
-use crate::utils::{Resource, ThreadLock};
+use crate::utils::{self, Resource, ThreadLock};
 
 pub mod default_components;
 pub mod ecs;
@@ -56,6 +56,14 @@ impl GraphicsResources {
     }
     pub fn get_material(&self, id:usize)->Option<&Texture2D>{
         self.textures.get(id) 
+    }
+    pub fn load_defaults(&mut self,handle:&mut RaylibHandle, thread:&mut RaylibThread){
+        let cube = raylib::prelude::Mesh::gen_mesh_cube(thread, 1.0, 1.0, 1.0);
+        let sphere = raylib::prelude::Mesh::gen_mesh_sphere(thread, 1.0,8, 8); 
+        self.create_mesh(cube);
+        self.create_mesh(sphere);
+        let shader = handle.load_shader(thread,Some("src/shaders/base.vs"), Some("src/shaders/base.fs")).expect("msg");
+        self.create_shader(shader);
     }
 }
 pub struct Runtime {
@@ -135,6 +143,38 @@ impl Runtime {
     ) {
         let mut draw = handle.begin_drawing(thread);
         draw.clear_background(color::Color::BLACK);
+        if let Ok(comps) = self.mesh_comps.read(){
+            let graphics = self.graphics_resources.get().expect("msg");
+            let mut id = 0;
+            unsafe{
+                //raylib::ffi::BeginDrawing();
+                raylib::ffi::ClearBackground(color::Color::BLACK.into());
+                raylib::ffi::BeginMode3D(Camera::perspective(Vector3::new(0.0, -10.0, 0.0), Vector3::new(0.0, 0.0, 0.0), Vector3::new(0.0, 0.0, 1.0), 90.0).into());
+            }
+            for i in &comps.values{
+                if let Some(i) = i{
+                    let mesh = graphics.get_mesh(i.mesh as usize);
+                    let shader =graphics.get_shader(i.mat as usize);
+                    let trans = get_transform_comp(id);
+                    let mut mat = unsafe {
+                        LoadMaterialDefault()
+                    };
+                    if shader.is_some() && mesh.is_some() && trans.is_some(){
+                        unsafe{
+                            mat.shader = **(shader.unwrap());
+                            DrawMesh(**mesh.unwrap(),mat,utils::transform_to_ffimatrix(trans.unwrap().location));
+                        }
+
+                    }
+                id += 1;
+                }
+            }
+            unsafe {
+                raylib::ffi::EndMode3D();
+                //raylib::ffi::DrawCircle(500, 500, 12.0, color::Color::WHITE.into());
+                //raylib::ffi::EndDrawing();
+            }
+        }
         let rd = self.entities.read().expect("msg");
         for i in rd.iter() {
             if let Some(j) = i.read().expect("msg").as_ref() {
@@ -155,7 +195,9 @@ impl Runtime {
             .vsync()
             .build();
         self.reserve_slots();
+        self.graphics_resources.get_mut().unwrap().load_defaults(&mut handle, &mut thread);
         setup();
+
         while !handle.window_should_close() {
             self.run_tick(handle.get_frame_time(), on_tick);
             self.run_render(&mut handle, &mut thread, on_draw);
@@ -233,3 +275,34 @@ pub fn get_transform_comp(id:u32)->Option<TransformComp>{
     }
 }
 
+pub fn set_physics_comp(id:u32, comp:PhysicsComp){
+    if let Ok(mut m) = RT.physics_comps.write(){
+        m.values[id as usize] = Some(comp);
+    } 
+}
+
+pub fn set_mesh_comp(id:u32, comp:MeshComp){
+    if let Ok(mut m) = RT.mesh_comps.write(){
+        m.values[id as usize] = Some(comp);
+    } 
+}
+
+
+pub fn set_transform_comp(id:u32, comp:TransformComp){
+    if let Ok(mut m) = RT.transform_comps.write(){
+        m.values[id as usize] = Some(comp);
+    } 
+}
+
+pub const fn get_cube_mesh()->u32{
+    0
+}
+
+
+pub const fn get_sphere_mesh()->u32{
+    1
+}
+
+pub const fn get_base_shader()->u32{
+    0
+}

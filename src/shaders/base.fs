@@ -30,5 +30,5 @@ void main()
     else if(delta>1.0){
         delta = 1.0;
     }
-    finalColor = delta * texture(diffuse, fragTexCoord);
+    finalColor = vec4(1.0, 1.0, 1.0, 1.0);
 }

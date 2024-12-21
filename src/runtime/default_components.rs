@@ -18,8 +18,8 @@ pub struct PhysicsComp{
 #[derive(Clone, Copy)]
 //requires transform
 pub struct MeshComp{
-    pub mesh:usize,
-    pub mat:usize,
+    pub mesh:u32,
+    pub mat:u32,
 }
 
 #[derive(Clone, Copy)]
