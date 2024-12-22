@@ -19,7 +19,7 @@ impl Entity for Ent{
             location:trans, relative_location:trans, parent_id:None,
         };
         runtime::set_transform_comp(id,trans_comp);
-        let mesh = MeshComp{mesh: runtime::get_cube_mesh(), mat:get_base_shader()};
+        let mesh = MeshComp{mesh: runtime::get_sphere_mesh(), mat:get_base_shader()};
         runtime::set_mesh_comp(id,mesh );
     }
     fn on_render(&self, handle:&mut raylib::prelude::RaylibDrawHandle) {

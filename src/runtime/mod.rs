@@ -59,13 +59,14 @@ impl GraphicsResources {
     }
     pub fn load_defaults(&mut self,handle:&mut RaylibHandle, thread:&mut RaylibThread){
         let cube = raylib::prelude::Mesh::gen_mesh_cube(thread, 1.0, 1.0, 1.0);
-        let sphere = raylib::prelude::Mesh::gen_mesh_sphere(thread, 1.0,8, 8); 
+        let sphere = raylib::prelude::Mesh::gen_mesh_sphere(thread, 1.0,16, 16); 
         self.create_mesh(cube);
         self.create_mesh(sphere);
         let shader = handle.load_shader(thread,Some("src/shaders/base.vs"), Some("src/shaders/base.fs")).expect("msg");
         self.create_shader(shader);
     }
 }
+
 pub struct Runtime {
     pub entities: RwLock<Vec<RwLock<Option<Box<dyn Entity + Send + Sync>>>>>,
     pub failed_to_create: Mutex<bool>,
