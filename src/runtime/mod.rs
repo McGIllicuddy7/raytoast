@@ -70,6 +70,7 @@ impl GraphicsResources {
 pub struct Runtime {
     pub entities: RwLock<Vec<RwLock<Option<Box<dyn Entity + Send + Sync>>>>>,
     pub failed_to_create: Mutex<bool>,
+    pub frame_time:Mutex<f32>,
     pub destroy_queue: Mutex<Vec<u32>>,
     pub transform_comps: RwLock<Resource<TransformComp>>,
     pub physics_comps: RwLock<Resource<PhysicsComp>>,
@@ -92,6 +93,7 @@ impl Runtime {
             mesh_comps: RwLock::new(Resource::new()),
             transform_comps: RwLock::new(Resource::new()),
             graphics_resources: ThreadLock::new(GraphicsResources::new()),
+            frame_time:Mutex::new(0.0),
         }
     }
     fn reserve_slots(&self) {
@@ -183,6 +185,10 @@ impl Runtime {
             }
         }
         on_draw(&mut draw);
+        drop(draw);
+        let mut ft= self.frame_time.lock().expect("msg");
+        *ft = handle.get_frame_time();
+
     }
     pub fn run(
         &self,
@@ -201,6 +207,7 @@ impl Runtime {
 
         while !handle.window_should_close() {
             self.run_tick(handle.get_frame_time(), on_tick);
+            self.run_physics();
             self.run_render(&mut handle, &mut thread, on_draw);
         }
     }
@@ -306,4 +313,25 @@ pub const fn get_sphere_mesh()->u32{
 
 pub const fn get_base_shader()->u32{
     0
+}
+pub fn get_frame_time()->f32{
+    let out = RT.frame_time.lock().expect("msg");
+    *out
+}
+
+impl Runtime{
+    pub fn run_physics(&self){
+        let physics = self.physics_comps.write().expect("msg");
+        for i in 0..physics.values.len(){
+           if physics.get(i).is_some(){
+                let current = physics.get(i);
+                if let Some(trans) = &mut self.transform_comps.write().expect("writable").values[i]{
+                    if let Some(cur) = current{
+                        trans.location.translation += cur.velocity *get_frame_time();
+                    }
+                }
+           }
+        }
+
+    }
 }
