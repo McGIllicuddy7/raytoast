@@ -1,4 +1,4 @@
-use raylib::{color::Color, ffi::BoundingBox, math::{Vector3, Vector4}, prelude::RaylibDraw};
+use raylib::{color::Color, math::{Vector3, Vector4, BoundingBox}, prelude::RaylibDraw};
 use runtime::{default_components::{MeshComp, PhysicsComp, TransformComp}, ecs::Entity, get_base_shader};
 
 pub mod runtime;
@@ -21,7 +21,7 @@ impl Entity for Ent{
         runtime::set_transform_comp(id,trans_comp);
         let mesh = MeshComp{mesh: runtime::get_sphere_mesh(), mat:get_base_shader()};
         runtime::set_mesh_comp(id,mesh );
-        let phys = PhysicsComp{velocity:raylib::math::Vector3::new(1.0, 0.0, 0.0), bounds: BoundingBox{min:raylib::math::Vector3::new(-1.0, -1.0, -1.0).into(), max:raylib::math::Vector3::new(1.0, 1.0, 1.0,).into()}, movable:true};
+        let phys = PhysicsComp{velocity:raylib::math::Vector3::new(1.0, 0.0, 0.0), bounds: BoundingBox{min:raylib::math::Vector3::new(-1.0, -1.0, -1.0).into(), max:raylib::math::Vector3::new(1.0, 1.0, 1.0,).into()}, movable:true, mass:1.0};
         runtime::set_physics_comp(id, phys);
     }
     fn on_render(&self, handle:&mut raylib::prelude::RaylibDrawHandle) {

@@ -1,4 +1,4 @@
-use std::sync::{RwLock, RwLockReadGuard};
+use std::sync::{Arc, RwLock, RwLockReadGuard};
 
 use raylib::prelude::RaylibDrawHandle;
 
@@ -7,6 +7,9 @@ use super::default_components::{MeshComp, PhysicsComp, TransformComp};
 
 #[allow(unused)]
 pub trait Entity:Send+Sync {
+    fn get_tags(&self)->Arc<[String]>{
+        Arc::new([])
+    }
     fn on_init(&mut self, id:u32){
         
     }
@@ -28,7 +31,6 @@ pub trait Entity:Send+Sync {
     fn get_id(&self)->Option<u32>{
         None
     }
-
 }  
 
 pub struct EntityRef<'a>{

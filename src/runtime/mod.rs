@@ -10,6 +10,7 @@ use crate::utils::{self, Resource, ThreadLock};
 
 pub mod default_components;
 pub mod ecs;
+pub mod physics;
 pub struct GraphicsResources {
     pub shaders: Resource<Shader>,
     pub textures:Resource<Texture2D>,
@@ -128,14 +129,12 @@ impl Runtime {
             }
         }
         let ents = self.read_entities();
-        let mut id = 0;
         on_tick();
         for i in ents.iter() {
             let mut ent_opt = i.write().expect("works");
             if let Some(ent) = ent_opt.as_mut() {
                 ent.on_tick(delta_time);
             }
-            id += 1;
         }
     }
     pub fn run_render(
@@ -317,21 +316,4 @@ pub const fn get_base_shader()->u32{
 pub fn get_frame_time()->f32{
     let out = RT.frame_time.lock().expect("msg");
     *out
-}
-
-impl Runtime{
-    pub fn run_physics(&self){
-        let physics = self.physics_comps.write().expect("msg");
-        for i in 0..physics.values.len(){
-           if physics.get(i).is_some(){
-                let current = physics.get(i);
-                if let Some(trans) = &mut self.transform_comps.write().expect("writable").values[i]{
-                    if let Some(cur) = current{
-                        trans.location.translation += cur.velocity *get_frame_time();
-                    }
-                }
-           }
-        }
-
-    }
 }

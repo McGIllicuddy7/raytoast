@@ -111,7 +111,7 @@ impl <T>Resource<T>{
     }
 }
 
-pub fn QuatToMat(q:Quaternion)->Matrix
+pub fn quat_to_mat(q:Quaternion)->Matrix
 {
     let mut result = raylib::math::Matrix::identity();
 
@@ -146,7 +146,7 @@ pub fn transform_to_matrix(trans:Transform)->Matrix{
     let rot = trans.rotation;
     let scale  = trans.scale;
     let locmat = raylib::math::Matrix::translate(loc.x, loc.y, loc.z);
-    let rotmat = QuatToMat(rot);
+    let rotmat = quat_to_mat(rot);
     let scalemat = raylib::math::Matrix::scale(scale.x, scale.y, scale.z);
     locmat*rotmat*scalemat
 }
