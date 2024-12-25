@@ -16,7 +16,7 @@ bool Int3_equals(Int3 a, Int3 b){
 enable_vec_type(u32);
 enable_hash_type(Int3, u32Vec);
 static Int3u32VecHashTable *table = 0;
-const float tile_size= 1.0;
+const float tile_size= 0.5;
 static OptionPhysicsCompVec phys ={};
 static OptionTransformCompVec trans = {};
 static pthread_t phys_thread = {0};
@@ -141,7 +141,7 @@ static void substep(float dt){
     }
 }
 static void *tick(void*){
-    table = Int3u32VecHashTable_create(10000, hash_int3, Int3_equals);
+    table = Int3u32VecHashTable_create(1000, hash_int3, Int3_equals);
     for(int i =0; i<phys.length; i++){
         Vector3 v = Vector3Scale(RT.transform_comps.items[i].value.transform.translation, 1/tile_size);
         Int3 key = {v.x, v.y, v.z};
