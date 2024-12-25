@@ -18,7 +18,6 @@ extern EntityVTable entity_default_vtable;
 typedef struct Entity{
     EntityVTable * vtable;
     u32 self_id;
-    u32 __dont_touch;
 }Entity;
 void default_on_tick(void *f, f32 dt);
 void default_on_setup(void*self ,u32 self_id);

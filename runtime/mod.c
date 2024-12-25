@@ -3,6 +3,7 @@
 #include <raymath.h>
 #include <rlgl.h>
 void run_physics();
+void finish_physics();
 void default_on_tick(void *f, f32 dt){
 
 }
@@ -51,7 +52,6 @@ void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
     RT.camera.projection = CAMERA_PERSPECTIVE;
     setup();
     while(!WindowShouldClose()){
-        run_physics();
         if (RT.failed_to_create){
             runtime_reserve();
         }
@@ -62,6 +62,7 @@ void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
             }
         }
         on_tick();
+        run_physics();
         BeginDrawing();
         ClearBackground(BLACK);
         rlEnableBackfaceCulling();
@@ -98,6 +99,7 @@ void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
         EndMode3D();
         on_render();
         EndDrawing();
+        finish_physics();
     }
     CloseWindow();
 }
@@ -110,7 +112,6 @@ Optionu32 create_entity(Entity * ent){
             return (Optionu32)Some(i);
         }
     }
-    assert(false);
     RT.failed_to_create = true;
     return (Optionu32)None;
 }
