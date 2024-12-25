@@ -41,7 +41,7 @@ void setup(){
     green= create_shader(LoadShader("shader/sbase.vs", "shaders/green.fs"));
     red = create_shader(LoadShader("shaders/base.vs", "shaders/red.fs"));
     msh.shader_id = white;
-    int max = 2000;
+    int max = 100;
     for(int i =0; i<max; i++){
         TestEntity * entity = malloc(sizeof(TestEntity));
         memcpy(entity->bytes, "012345678910", 13);
@@ -50,8 +50,8 @@ void setup(){
         assert(id == i);
         entity->entity.self_id = id;
         Transform transform;
-        //transform.translation = (Vector3){8.0*cos((f32)i/max *2.0*PI), 8.0 *sin((f32)i/max *2.0*PI), 0};
-        transform.translation = gen_random_vector(50.0);
+        transform.translation = (Vector3){16.0*cos((f32)i/max *2.0*PI), 16.0 *sin((f32)i/max *2.0*PI), 0};
+        //transform.translation = gen_random_vector(50.0);
         float scale = 1.0;
         msh.shader_id = i%2 == 0 ? red :white;
         transform.scale = (Vector3){scale, scale, scale};
@@ -62,7 +62,7 @@ void setup(){
         phys.movable = 1;
         phys.box.max = (Vector3){0.1, 0.1, 0.1};
         phys.box.min = (Vector3){-0.1, -0.1, -0.1};
-        phys.velocity = Vector3Scale(Vector3Negate(Vector3Normalize(transform.translation)),5.0);
+        phys.velocity = Vector3Scale(Vector3Negate(Vector3Normalize(transform.translation)),10.0);
         phys.mass = 1.0;
         set_transform_comp(id, trans);
         set_mesh_comp(id, msh);

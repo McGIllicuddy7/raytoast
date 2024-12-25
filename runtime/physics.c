@@ -86,7 +86,12 @@ static float max_allowed_distance(u32 id){
                                 min = dist;
                             }
                             else{
-                                if(Vector3DotProduct(Vector3Normalize(phys.items[id].value.velocity), Vector3Normalize(delta))<-0.5){
+                                Vector3 displacement = Vector3Scale(Vector3Normalize(phys.items[id].value.velocity), 0.01);
+                                BoundingBox b3;
+                                b3.max = Vector3Add(b1.max, displacement);
+                                b3.min = Vector3Add(b1.min, displacement);
+                                float dist2 = bb_distance(b3,b2);
+                                if(dist2<dist){
                                     min = dist;
                                 }
                             }
