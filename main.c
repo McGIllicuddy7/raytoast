@@ -26,7 +26,7 @@ void TestEntity_on_tick(TestEntity * self, float delta_time){
     if(Vector3Distance(location, (Vector3){0,0,0})<1e-16){
         //add_force(id, gen_random_vector(10.0));
     } else{
-        add_force(id, Vector3Scale(Vector3Normalize(location), delta_time*-0.1));
+        add_force(id, Vector3Scale(location, -delta_time*0.1));
     }
 }
 
@@ -34,14 +34,14 @@ void setup(){
     srand(time(0));
     float rad = 1.0;
     u32 cube_id = create_mesh(GenMeshCube(0.2, 0.2, 0.2));
-    u32 mesh_id = create_mesh(GenMeshSphere(0.1, 8, 8));
+    u32 mesh_id = create_mesh(GenMeshSphere(0.1, 16, 16));
     assert(cube_id != mesh_id);
     MeshComp msh = {};
     msh.mesh_id = mesh_id;
-    green= create_shader(LoadShader("shader/sbase.vs", "shaders/green.fs"));
+    green= create_shader(LoadShader("shader/sbase.vs", "shaders/white.fs"));
     red = create_shader(LoadShader("shaders/base.vs", "shaders/red.fs"));
     msh.shader_id = white;
-    int max = 1000;
+    int max = 12000;
     for(int i =0; i<max; i++){
         TestEntity * entity = malloc(sizeof(TestEntity));
         memcpy(entity->bytes, "012345678910", 13);
@@ -51,9 +51,9 @@ void setup(){
         entity->entity.self_id = id;
         Transform transform;
         //transform.translation = (Vector3){16.0*cos((f32)i/max *2.0*PI), 16.0 *sin((f32)i/max *2.0*PI), 0};
-        transform.translation = gen_random_vector(50.0);
+        transform.translation = gen_random_vector(20.0);
         float scale = 1.0;
-        msh.shader_id = i%2 == 0 ? red :white;
+        msh.shader_id = white;
         transform.scale = (Vector3){scale, scale, scale};
         transform.rotation = (Quaternion){0.0, 0.0, 0.0, 1.0};
         TransformComp trans ={};
@@ -62,7 +62,7 @@ void setup(){
         phys.movable = 1;
         phys.box.max = (Vector3){0.1, 0.1, 0.1};
         phys.box.min = (Vector3){-0.1, -0.1, -0.1};
-        phys.velocity = Vector3Scale(Vector3RotateByQuaternion(Vector3Negate(Vector3Normalize(transform.translation)), (Quaternion){0.0, 0.0, 0.0,1.0}),10.0);
+        phys.velocity = Vector3Scale(Vector3RotateByQuaternion(Vector3Negate(Vector3Normalize(transform.translation)), (Quaternion){0.0, 0.0, 0.,1.0}),1.0);
         phys.mass = 1.0;
         set_transform_comp(id, trans);
         set_mesh_comp(id, msh);
@@ -73,10 +73,6 @@ void on_tick(){
     static u128 frame_count = 0;
     UpdateCamera(get_camera(), CAMERA_THIRD_PERSON);
     if(IsKeyPressed(KEY_ESCAPE)){
-        exit(0);
-    }
-    if(GetFrameTime()>1.0/30.0&& frame_count>120){
-        printf("lag spike\n");
         exit(0);
     }
     frame_count += 1;

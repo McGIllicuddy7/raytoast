@@ -7,6 +7,12 @@ typedef struct {
     int y;
     int z;
 }Int3;
+typedef struct{
+    u32 base;
+    u32 end;
+    float dt;
+    volatile u64* done_flag;
+}PhysicsThreadArg;
 size_t hash_int3(Int3 i){
     return hash_bytes((void *)&i, sizeof(Int3));
 }
@@ -103,6 +109,7 @@ static float max_allowed_distance(u32 id){
     }
     return min;
 }
+inline
 static void collision_iter(PhysicsComp * comp, Transform * transform, u32 id, float dt){
     if(!comp->movable){
         return;
@@ -116,7 +123,7 @@ static void collision_iter(PhysicsComp * comp, Transform * transform, u32 id, fl
     while(distance_travelled<max_travelled_dist){
         float max_distance = max_allowed_distance(id);
         if(max_distance <0.01){
-            comp->velocity = Vector3Negate(comp->velocity);
+            comp->velocity = Vector3Scale(Vector3Negate(comp->velocity),0.9);
             break;
         }
         Vector3 displacement;
@@ -130,7 +137,51 @@ static void collision_iter(PhysicsComp * comp, Transform * transform, u32 id, fl
         trans.items[id].value.transform.translation = Vector3Add(trans.items[id].value.transform.translation, displacement);
     }
 }
-static void substep(float dt){
+
+static void * substep_iter(void * args){
+    PhysicsThreadArg * arg = args;
+    float dt = arg->dt;
+    for(int i =arg->base; i<arg->end; i++){
+        if(trans.items[i].is_valid&& phys.items[i].is_valid){
+            if(!phys.items[i].value.movable){
+                continue;
+            }
+            collision_iter(&phys.items[i].value, &trans.items[i].value.transform, i, dt);
+        }
+    }
+    *(arg->done_flag) = true;
+    return 0;
+}
+static void threads_run(float dt){
+    #define THREAD_COUNT 7
+    pthread_t threads[THREAD_COUNT] = {};
+    PhysicsThreadArg args[THREAD_COUNT] = {};
+    volatile u64 done_flags[THREAD_COUNT] = {};
+    float ratio = (float)phys.length/(float)THREAD_COUNT;
+    for(int i =0; i<THREAD_COUNT-1; i++){
+        PhysicsThreadArg arg = {ratio*i, ratio*(i+1), dt, &done_flags[i]};
+        args[i] = arg;
+        pthread_create(&threads[i], 0, substep_iter, &args[i]);
+    } 
+    args[THREAD_COUNT-1] = (PhysicsThreadArg){ratio*(THREAD_COUNT-1), phys.length, dt, &done_flags[THREAD_COUNT-1]};
+    substep_iter(&args[THREAD_COUNT-1]);
+    while (true){
+        bool contains_false = false;
+        for(int i =0; i<THREAD_COUNT; i++){
+            if(done_flags[i] == false){
+                contains_false = true;
+            }
+        }
+        if(!contains_false){
+            break;
+        }
+    }
+    for(int i =0; i<THREAD_COUNT-1; i++){
+        pthread_join(threads[i],0);
+    }
+    #undef THREAD_COUNT
+}
+static void run_single(float dt){
     for(int i =0; i<phys.length; i++){
         if(trans.items[i].is_valid&& phys.items[i].is_valid){
             if(!phys.items[i].value.movable){
@@ -154,10 +205,8 @@ static void *tick(void*){
            v_append((*v), i);
         }
     }
-    const int steps = 1;
-    for(int i =0; i<steps; i++){
-        substep(GetFrameTime()/steps);
-    }
+    //run_single(GetFrameTime());
+    threads_run(GetFrameTime());
     Int3u32VecHashTable_unmake(table);
     table = 0;
     return 0;
