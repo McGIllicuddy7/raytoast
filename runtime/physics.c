@@ -1,9 +1,9 @@
 #include "../runtime.h"
 #include <raymath.h>
 #include <pthread.h>
-OptionPhysicsCompVec phys ={};
-OptionTransformCompVec trans = {};
-pthread_t phys_thread = {0};
+static OptionPhysicsCompVec phys ={};
+static OptionTransformCompVec trans = {};
+static pthread_t phys_thread = {0};
 static void *tick(void*){;
     for(int i =0; i<phys.length; i++){
         if(trans.items[i].is_valid&& phys.items[i].is_valid){
