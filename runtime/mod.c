@@ -26,9 +26,9 @@ Runtime RT = {};
 static void runtime_reserve(){
     for(int i =0; i<100; i++){
         v_append(RT.entities, 0);
-        v_append(RT.mesh_comps,(OptionMeshComp) None);
-        v_append(RT.transform_comps,(OptionTransformComp) None);
-        v_append(RT.physics_comps,(OptionPhysicsComp) None);
+        v_append(RT.mesh_comps,(OptionMeshComp) {});
+        v_append(RT.transform_comps,(OptionTransformComp){});
+        v_append(RT.physics_comps,(OptionPhysicsComp) {});
     }
 }
 
@@ -42,6 +42,7 @@ void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
     for(int i =0; i<500; i++){
         runtime_reserve();
     }
+    SetTraceLogLevel(LOG_ERROR);
     InitWindow(1600, 1024,"raytoast");
     SetTargetFPS(61);
     DisableCursor();
@@ -74,13 +75,18 @@ void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
         Material mat = LoadMaterialDefault();
         BeginMode3D(RT.camera);
         for (int i =0; i<RT.mesh_comps.length; i++){
+            if(!RT.entities.items[i]){
+                continue;
+            }
             if (RT.mesh_comps.items[i].is_valid){
                 OptionShader shade = get_shader(RT.mesh_comps.items[i].value.shader_id);
+           
+                assert(shade.is_valid);
                 if(!shade.is_valid){
                     continue;
                 }
                 mat.shader = shade.value;
-                OptionMesh msh = get_mesh(RT.mesh_comps.items[i].value.shader_id);
+                OptionMesh msh = get_mesh(RT.mesh_comps.items[i].value.mesh_id);
                  if(!msh.is_valid){
                     continue;
                 } 
@@ -93,6 +99,7 @@ void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
                 Matrix rot = QuaternionToMatrix(trans->transform.rotation);
                 Matrix scale = MatrixScale(trans->transform.scale.x, trans->transform.scale.y, trans->transform.scale.z);
                 Matrix transform = MatrixMultiply(loc, MatrixMultiply(rot, scale));
+                PhysicsComp * cmp = get_physics_comp(i);
                 DrawMesh(msh.value, mat,transform);
             }
         }
@@ -174,7 +181,8 @@ bool set_physics_comp(u32 id, PhysicsComp phys){
     if(!RT.entities.items[id]){
         return false;
     }
-    RT.physics_comps.items[id] = (OptionPhysicsComp)Some(phys);
+    RT.physics_comps.items[id].value = phys;
+    RT.physics_comps.items[id].is_valid = true;
     return true;
 }
 PhysicsComp * get_physics_comp(u32 id){

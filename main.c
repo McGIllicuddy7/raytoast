@@ -3,14 +3,19 @@
 #include "runtime.h"
 #include <raymath.h>
 #include "utils.h"
+
 typedef struct{
     Entity entity;
     char bytes[13];
 }TestEntity;
 void TestEntity_on_tick(TestEntity * self, float delta_time);
 EntityVTable TestEntityVTable = {.destructor  = default_on_destroy, .on_render = default_on_render, .on_tick = (void*)TestEntity_on_tick, .on_setup = default_on_setup};
+static u32 red;
+static u32 white;
+static u32 green;
 Vector3 gen_random_vector(float in_radius){
-    float radius = ((rand()%100000)/100000.0)*((rand()%100000)/100000.0)*in_radius;
+    float radius = sqrt((f32)(rand()%100000)/100000.0);
+    radius*= in_radius;
     float phi = rand()%100000/100000.0*2*PI;
     float theta = rand()%100000/100000.0*2*PI;
     return (Vector3){cos(theta)*cos(phi)*radius, sin(theta)*cos(phi)*radius, sin(phi)*radius};
@@ -21,24 +26,23 @@ void TestEntity_on_tick(TestEntity * self, float delta_time){
     if(Vector3Distance(location, (Vector3){0,0,0})<1e-16){
         //add_force(id, gen_random_vector(10.0));
     } else{
-        //add_force(id, Vector3Scale(Vector3Normalize(location), delta_time*-0.1));
-    }
-    if(get_physics_comp(id)->collided_this_frame){
-        get_mesh_comp(id)->shader_id = 1;
-    } else{
-        get_mesh_comp(id)->shader_id = 0; 
+        add_force(id, Vector3Scale(Vector3Normalize(location), delta_time*-0.1));
     }
 }
 
 void setup(){
     srand(time(0));
-    float rad = 0.1;
+    float rad = 1.0;
+    u32 cube_id = create_mesh(GenMeshCube(0.2, 0.2, 0.2));
     u32 mesh_id = create_mesh(GenMeshSphere(0.1, 8, 8));
+    assert(cube_id != mesh_id);
     MeshComp msh = {};
     msh.mesh_id = mesh_id;
-    msh.shader_id = create_shader(LoadShader(0, "shaders/white.fs"));
-    create_shader(LoadShader(0, "shaders/red.fs"));
-    for(int i =0; i<100; i++){
+    green= create_shader(LoadShader("shader/sbase.vs", "shaders/green.fs"));
+    red = create_shader(LoadShader("shaders/base.vs", "shaders/red.fs"));
+    msh.shader_id = white;
+    int max = 2000;
+    for(int i =0; i<max; i++){
         TestEntity * entity = malloc(sizeof(TestEntity));
         memcpy(entity->bytes, "012345678910", 13);
         entity->entity.vtable = &TestEntityVTable;
@@ -46,15 +50,19 @@ void setup(){
         assert(id == i);
         entity->entity.self_id = id;
         Transform transform;
-        transform.translation = gen_random_vector(1.0);
+        //transform.translation = (Vector3){8.0*cos((f32)i/max *2.0*PI), 8.0 *sin((f32)i/max *2.0*PI), 0};
+        transform.translation = gen_random_vector(50.0);
         float scale = 1.0;
+        msh.shader_id = i%2 == 0 ? red :white;
         transform.scale = (Vector3){scale, scale, scale};
         transform.rotation = (Quaternion){0.0, 0.0, 0.0, 1.0};
         TransformComp trans ={};
         trans.transform = transform;
         PhysicsComp phys = {};
-        phys.box = (BoundingBox){{-rad, -rad, -rad}, {rad, rad, rad}};
-        phys.velocity = Vector3Negate(transform.translation);
+        phys.movable = 1;
+        phys.box.max = (Vector3){0.1, 0.1, 0.1};
+        phys.box.min = (Vector3){-0.1, -0.1, -0.1};
+        phys.velocity = Vector3Scale(Vector3Negate(Vector3Normalize(transform.translation)),5.0);
         phys.mass = 1.0;
         set_transform_comp(id, trans);
         set_mesh_comp(id, msh);
@@ -63,6 +71,9 @@ void setup(){
 }
 void on_tick(){
     UpdateCamera(get_camera(), CAMERA_THIRD_PERSON);
+    if(IsKeyPressed(KEY_ESCAPE)){
+        exit(0);
+    }
 }
 void on_render(){
     DrawFPS(1550, 100);

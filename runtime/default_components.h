@@ -19,6 +19,7 @@ typedef struct{
     Vector3 velocity;
     float mass;
     bool collided_this_frame;
+    bool movable;
 }PhysicsComp;
 enable_option_type(PhysicsComp);
 enable_vec_type(OptionPhysicsComp);

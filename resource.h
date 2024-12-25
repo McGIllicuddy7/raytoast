@@ -12,10 +12,14 @@ static u32 Resource##T##_create(Resource##T * self, T value){\
     for(int i =0; i<self->values.length; i++){\
         if(!self->values.items[i].is_valid){\
             self->values.items[i] = (Option##T)Some(value);\
+            self->values.items[i].is_valid = true;\
             return i;\
         }\
     }\
-    v_append(self->values, (Option##T)Some(value));\
+    Option##T v; v.is_valid = true; v.value = value;\
+    int len = self->values.length;\
+    v_append(self->values, v);\
+    assert(len != self->values.length);\
     return self->values.length-1;\
 }\
 static void Resource##T##_destroy(Resource##T * self, u32 id){\
@@ -29,7 +33,7 @@ static void Resource##T##_destroy(Resource##T * self, u32 id){\
     \
 }\
 static T* Resource##T##_get(Resource##T * self, u32 id){\
-    if (id >=self->values.length){\
+    if (id >self->values.length){\
         return 0;\
     }\
     else if (!self->values.items[id].is_valid){\
