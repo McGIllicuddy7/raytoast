@@ -5,8 +5,10 @@
 #include "utils.h"
 typedef struct{
     Entity entity;
-    u32 hp;
+    char bytes[13];
 }TestEntity;
+void TestEntity_on_tick(TestEntity * self, float delta_time);
+EntityVTable TestEntityVTable = {.destructor  = default_on_destroy, .on_render = default_on_render, .on_tick = (void*)TestEntity_on_tick, .on_setup = default_on_setup};
 Vector3 gen_random_vector(float in_radius){
     float radius = ((rand()%100000)/100000.0)*((rand()%100000)/100000.0)*in_radius;
     float phi = rand()%100000/100000.0*2*PI;
@@ -19,9 +21,10 @@ void TestEntity_on_tick(TestEntity * self, float delta_time){
     if(Vector3Distance(location, (Vector3){0,0,0})<1e-16){
         add_force(id, gen_random_vector(10.0));
     } else{
-        add_force(id, Vector3Scale(Vector3Normalize(location), delta_time*-1.0));
+        add_force(id, Vector3Scale(Vector3Normalize(location), delta_time*-0.1));
     }
 }
+
 void setup(){
     srand(time(0));
     float rad = 0.1;
@@ -31,9 +34,11 @@ void setup(){
     msh.shader_id = create_shader(LoadMaterialDefault().shader);
     for(int i =0; i<10000; i++){
         TestEntity * entity = malloc(sizeof(TestEntity));
-        entity->entity.vtable = &entity_default_vtable;
-        entity->entity.vtable->on_tick = (void*)TestEntity_on_tick;
-        u32 id = create_entity(&entity->entity).value;
+        memcpy(entity->bytes, "012345678910", 13);
+        entity->entity.vtable = &TestEntityVTable;
+        u32 id = create_entity((void*)entity).value;
+        assert(id == i);
+        entity->entity.self_id = id;
         Transform transform;
         transform.translation = gen_random_vector(10.0);
         float scale = rand()%1000/1000.0;

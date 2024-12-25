@@ -3,16 +3,17 @@
 #include <raymath.h>
 #include <rlgl.h>
 void run_physics();
-static void default_on_tick(void *f, f32 dt){
+void default_on_tick(void *f, f32 dt){
 
 }
-static void default_on_setup(void*self ,u32 self_id){
+void default_on_setup(void*self ,u32 self_id){
+    Entity * ent = self;
+    ent->self_id = self_id;
+}
+void default_on_render(void * self){
 
 }
-static void default_on_render(void * self){
-
-}
-static void default_on_destroy(void * self){
+void default_on_destroy(void * self){
 
 }
 EntityVTable entity_default_vtable = 
@@ -54,9 +55,10 @@ void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
         if (RT.failed_to_create){
             runtime_reserve();
         }
+        float ft = GetFrameTime();
         for (int i =0; i<RT.entities.length; i++){
             if (RT.entities.items[i]){
-                RT.entities.items[i]->vtable->on_render( &RT.entities.items[i]);
+                RT.entities.items[i]->vtable->on_tick(RT.entities.items[i], ft);
             }
         }
         on_tick();
@@ -65,7 +67,7 @@ void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
         rlEnableBackfaceCulling();
         for (int i =0; i<RT.entities.length; i++){
             if (RT.entities.items[i]){
-                RT.entities.items[i]->vtable->on_render( &RT.entities.items[i]);
+                RT.entities.items[i]->vtable->on_render( RT.entities.items[i]);
             }
         }
         Material mat = LoadMaterialDefault();
@@ -97,15 +99,18 @@ void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
         on_render();
         EndDrawing();
     }
+    CloseWindow();
 }
 
 Optionu32 create_entity(Entity * ent){
     for (int i=0; i<RT.entities.length; i++){
         if(!RT.entities.items[i]){
             RT.entities.items[i] = ent;
+            ent->vtable->on_setup(ent, i);
             return (Optionu32)Some(i);
         }
     }
+    assert(false);
     RT.failed_to_create = true;
     return (Optionu32)None;
 }
@@ -139,7 +144,7 @@ bool set_transform_comp(u32 id, TransformComp trans){
     return true;
 }
 TransformComp * get_transform_comp(u32 id){
-    if(id>RT.entities.length){
+    if(id>=RT.entities.length){
         return 0;
     }
     if(!RT.entities.items[id]){

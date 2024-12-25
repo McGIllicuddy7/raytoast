@@ -18,8 +18,12 @@ extern EntityVTable entity_default_vtable;
 typedef struct Entity{
     EntityVTable * vtable;
     u32 self_id;
+    u32 __dont_touch;
 }Entity;
-
+void default_on_tick(void *f, f32 dt);
+void default_on_setup(void*self ,u32 self_id);
+void default_on_render(void * self);
+void default_on_destroy(void * self);
 typedef Entity * EntityRef;
 enable_vec_type(EntityRef);
 enable_option_type(Mesh);
