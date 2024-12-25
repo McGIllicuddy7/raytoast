@@ -1,4 +1,4 @@
-use std::sync::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use std::sync::{Arc, Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 use default_components::{MeshComp, PhysicsComp, TransformComp};
 use ecs::{Entity, EntityRef};
@@ -77,6 +77,7 @@ pub struct Runtime {
     pub physics_comps: RwLock<Resource<PhysicsComp>>,
     pub mesh_comps: RwLock<Resource<MeshComp>>,
     pub graphics_resources: ThreadLock<GraphicsResources>,
+    pub event_queue:
 }
 impl Default for Runtime {
     fn default() -> Self {
@@ -316,4 +317,8 @@ pub const fn get_base_shader()->u32{
 pub fn get_frame_time()->f32{
     let out = RT.frame_time.lock().expect("msg");
     *out
+}
+
+pub fn event(id:usize,func:Arc<dyn Fn (&dyn Entity)>){
+
 }
