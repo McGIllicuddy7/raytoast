@@ -1,6 +1,9 @@
 #include "../runtime.h"
 #include <raymath.h>
 #include <pthread.h>
+#include <stdbool.h>
+#define true 1 
+#define false 0
 //https://iquilezles.org/articles/distfunctions/
 typedef struct {
     int x;
@@ -109,7 +112,6 @@ static float max_allowed_distance(u32 id){
     }
     return min;
 }
-inline
 static void collision_iter(PhysicsComp * comp, Transform * transform, u32 id, float dt){
     if(!comp->movable){
         return;
@@ -123,7 +125,7 @@ static void collision_iter(PhysicsComp * comp, Transform * transform, u32 id, fl
     while(distance_travelled<max_travelled_dist){
         float max_distance = max_allowed_distance(id);
         if(max_distance <0.01){
-            comp->velocity = Vector3Scale(Vector3Negate(comp->velocity),0.9);
+            comp->velocity = Vector3Scale(Vector3Negate(comp->velocity),0.5);
             break;
         }
         Vector3 displacement;

@@ -12,6 +12,6 @@ uniform vec4 colDiffuse;
 // Output fragment color
 out vec4 finalColor;
 void main(){
-    finalColor = vec4(2.0, 2.0,2.0, 1.0);
+    finalColor = vec4(1.0, 0.5,0.0, 0.2);
 }
 
