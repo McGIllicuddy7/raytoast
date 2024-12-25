@@ -1,6 +1,7 @@
 #define RUNTIME_MOD
 #include "../runtime.h"
 #include <raymath.h>
+#include <rlgl.h>
 static void default_on_tick(void *f, f32 dt){
 
 }
@@ -57,6 +58,7 @@ void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
         on_tick();
         BeginDrawing();
         ClearBackground(BLACK);
+        rlEnableBackfaceCulling();
         for (int i =0; i<RT.entities.length; i++){
             if (RT.entities.items[i]){
                 RT.entities.items[i]->vtable->on_render( &RT.entities.items[i]);
