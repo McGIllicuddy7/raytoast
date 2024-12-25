@@ -18,6 +18,7 @@ typedef struct{
     BoundingBox box;
     Vector3 velocity;
     float mass;
+    bool collided_this_frame;
 }PhysicsComp;
 enable_option_type(PhysicsComp);
 enable_vec_type(OptionPhysicsComp);
