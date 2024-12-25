@@ -36,7 +36,7 @@ void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
     RT.transform_comps =(OptionTransformCompVec)make(0, OptionTransformComp);
     RT.physics_comps =(OptionPhysicsCompVec)make(0, OptionPhysicsComp);
     runtime_reserve();
-    InitWindow(1024, 1024,"rayc");
+    InitWindow(1600, 1024,"raytoast");
     SetTargetFPS(61);
     DisableCursor();
     RT.camera.fovy = 90.0;

@@ -37,7 +37,7 @@ void on_tick(){
     UpdateCamera(get_camera(), CAMERA_THIRD_PERSON);
 }
 void on_render(){
-    DrawFPS(950, 100);
+    DrawFPS(1550, 100);
 }
 int main(void){
     init_runtime(setup, on_tick, on_render);
