@@ -70,3 +70,5 @@ OptionMesh get_mesh(u32 id);
 bool remove_mesh(u32 id);
 
 Camera3D * get_camera();
+
+void add_force(u32 id, Vector3 force);

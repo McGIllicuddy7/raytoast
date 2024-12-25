@@ -16,6 +16,8 @@ enable_vec_type(OptionMeshComp);
 
 typedef struct{
     BoundingBox box;
+    Vector3 velocity;
+    float mass;
 }PhysicsComp;
 enable_option_type(PhysicsComp);
 enable_vec_type(OptionPhysicsComp);

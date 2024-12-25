@@ -2,6 +2,7 @@
 #include "../runtime.h"
 #include <raymath.h>
 #include <rlgl.h>
+void run_physics();
 static void default_on_tick(void *f, f32 dt){
 
 }
@@ -19,9 +20,9 @@ EntityVTable entity_default_vtable =
 .on_setup = default_on_setup, 
 .destructor = default_on_destroy,
 .on_render = default_on_render};
-static Runtime RT = {};
+Runtime RT = {};
 static void runtime_reserve(){
-    for(int i =0; i<10000; i++){
+    for(int i =0; i<100; i++){
         v_append(RT.entities, 0);
         v_append(RT.mesh_comps,(OptionMeshComp) None);
         v_append(RT.transform_comps,(OptionTransformComp) None);
@@ -36,7 +37,9 @@ void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
     RT.mesh_comps =(OptionMeshCompVec)make(0, OptionMeshComp);
     RT.transform_comps =(OptionTransformCompVec)make(0, OptionTransformComp);
     RT.physics_comps =(OptionPhysicsCompVec)make(0, OptionPhysicsComp);
-    runtime_reserve();
+    for(int i =0; i<500; i++){
+        runtime_reserve();
+    }
     InitWindow(1600, 1024,"raytoast");
     SetTargetFPS(61);
     DisableCursor();
@@ -47,6 +50,7 @@ void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
     RT.camera.projection = CAMERA_PERSPECTIVE;
     setup();
     while(!WindowShouldClose()){
+        run_physics();
         if (RT.failed_to_create){
             runtime_reserve();
         }
@@ -247,4 +251,11 @@ bool remove_mesh(u32 id){
 }
 Camera3D * get_camera(){
     return &RT.camera;
+}
+
+void add_force(u32 id, Vector3 force){
+    PhysicsComp * phys = get_physics_comp(id);
+    if(phys){
+        phys->velocity = Vector3Add(phys->velocity, Vector3Scale(force, 1/phys->mass));
+    }
 }
