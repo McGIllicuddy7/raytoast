@@ -57,20 +57,12 @@ static float bb_distance(BoundingBox a, BoundingBox b){
     }
     return distance;
 }
-static bool check_collision(u32 id1, u32 id2){
-    BoundingBox b1 = phys.items[id1].value.box;
-    BoundingBox b2 = phys.items[id2].value.box;
-    b1.max = Vector3Add(b1.max, trans.items[id1].value.transform.translation);
-    b2.max = Vector3Add(b2.max, RT.transform_comps.items[id2].value.transform.translation);
-    b1.min = Vector3Add(b1.min, trans.items[id1].value.transform.translation);
-    b2.min = Vector3Add(b2.min, RT.transform_comps.items[id2].value.transform.translation);
-    return CheckCollisionBoxes(b1, b2);
-}
-static float max_allowed_distance(u32 id){
+static float max_allowed_distance(u32 id, u32 * collision_id, Vector3 * collision_normal){
     float min = tile_size;
     Vector3 t = Vector3Scale(trans.items[id].value.transform.translation, 1/tile_size);
     Int3 xyz = {t.x, t.y, t.z};
     int count = 1;
+    u32 min_idx = 0;
     for(int dx = -count; dx<=count; dx++){
         for(int dy = -count; dy<=count; dy++){
             for(int dz = -count; dz<=count;dz++ ){
@@ -92,6 +84,7 @@ static float max_allowed_distance(u32 id){
                         Vector3 delta = Vector3Subtract(Vector3Scale(Vector3Add(b1.max,b1.min), 0.5), Vector3Scale(Vector3Add(b2.max,b2.min),0.5));
                         if(dist<min){
                             if(dist>=0.05){
+                                min_idx = id1;
                                 min = dist;
                             }
                             else{
@@ -101,6 +94,7 @@ static float max_allowed_distance(u32 id){
                                 b3.min = Vector3Add(b1.min, displacement);
                                 float dist2 = bb_distance(b3,b2);
                                 if(dist2<dist){
+                                    min_idx = id1;
                                     min = dist;
                                 }
                             }
@@ -123,7 +117,9 @@ static void collision_iter(PhysicsComp * comp, Transform * transform, u32 id, fl
     float distance_travelled = 0.0;
     Vector3 norm = Vector3Normalize(comp->velocity);
     while(distance_travelled<max_travelled_dist){
-        float max_distance = max_allowed_distance(id);
+        Vector3 col_norm;
+        u32 collision_id;
+        float max_distance = max_allowed_distance(id, &collision_id, &col_norm);
         if(max_distance <0.01){
             comp->velocity = Vector3Scale(Vector3Negate(comp->velocity),0.5);
             break;

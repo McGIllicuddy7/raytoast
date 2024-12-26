@@ -14,18 +14,24 @@ static u32 red;
 static u32 white;
 static u32 green;
 float random_float(){
-   return rand()%1'000/1'000.0;
+   return GetRandomValue(0,10'000)/(10'000.0);
 }
 Vector3 gen_random_vector(float in_radius){
     
     float radius = sqrt(random_float());
     radius*= in_radius;
     float phi = random_float()*2*PI;
-    if(fabs(phi-PI/2.0)<PI/10.0|| fabs(phi-3*PI/2.0)<PI/10.0){
-        phi += (2*random_float()-1)*PI;
+    if(fabs(phi-PI/2.0)<PI/12.0|| fabs(phi-3*PI/2.0)<PI/12.0){
+        phi += (2*random_float()-1)*PI*2.0;
     }
     float theta = random_float()*2*PI;
     return (Vector3){cos(theta)*cos(phi)*radius, sin(theta)*cos(phi)*radius, sin(phi)*radius};
+}
+Vector3 vec_from_sphere(float radius, float phi, float theta){
+    if(fabs(phi-PI/2.0)<PI/12.0|| fabs(phi-3*PI/2.0)<PI/12.0){
+        phi += (2*random_float()-1)*PI*2.0;
+    }
+    return (Vector3){cos(theta)*cos(phi)*radius, sin(theta)*cos(phi)*radius, sin(phi)*radius}; 
 }
 void TestEntity_on_tick(TestEntity * self, float delta_time){
     u32 id = self->entity.self_id;
@@ -33,22 +39,23 @@ void TestEntity_on_tick(TestEntity * self, float delta_time){
     if(Vector3Distance(location, (Vector3){0,0,0})<1e-16){
         //add_force(id, gen_random_vector(10.0));
     } else{
-        add_force(id, Vector3Scale(location, -delta_time*0.1));
+        add_force(id, Vector3Scale(location, -delta_time*50*1/(Vector3LengthSqr(location))));
     }
 }
 
 void setup(){
     srand(time(0));
+    SetRandomSeed(time(0));
     float rad = 1.0;
     u32 cube_id = create_mesh(GenMeshCube(0.2, 0.2, 0.2));
-    u32 mesh_id = create_mesh(GenMeshSphere(0.2, 16, 16));
+    u32 mesh_id = create_mesh(GenMeshSphere(0.1, 16, 16));
     assert(cube_id != mesh_id);
     MeshComp msh = {};
     msh.mesh_id = mesh_id;
     green= create_shader(LoadShader("shader/sbase.vs", "shaders/white.fs"));
     red = create_shader(LoadShader("shaders/base.vs", "shaders/red.fs"));
     msh.shader_id = white;
-    int max = 12000;
+    int max = 8000;
     for(int i =0; i<max; i++){
         TestEntity * entity = malloc(sizeof(TestEntity));
         memcpy(entity->bytes, "012345678910", 13);
@@ -57,8 +64,11 @@ void setup(){
         assert(id == i);
         entity->entity.self_id = id;
         Transform transform;
-        //transform.translation = (Vector3){16.0*cos((f32)i/max *2.0*PI), 16.0 *sin((f32)i/max *2.0*PI), 0};
-        transform.translation = gen_random_vector(40.0);
+        transform.translation = (Vector3){128.0*cos((f32)i/max *2.0*PI), 128.0 *sin((f32)i/max *2.0*PI), 0};
+        float theta = random_float()*2*PI;
+        float phi = random_float()*2*PI;
+        float radius = sqrt(random_float())*40.0;
+        //transform.translation = vec_from_sphere(radius, phi, theta);
         float scale = 1.0;
         msh.shader_id = white;
         transform.scale = (Vector3){scale, scale, scale};
@@ -69,7 +79,8 @@ void setup(){
         phys.movable = 1;
         phys.box.max = (Vector3){0.1, 0.1, 0.1};
         phys.box.min = (Vector3){-0.1, -0.1, -0.1};
-        phys.velocity = Vector3Scale(Vector3Negate(Vector3Normalize(transform.translation)),1.0);
+        phys.velocity = (Vector3){-sin(theta)*cos(phi), -cos(theta)*sin(phi), 0};
+        phys.velocity = Vector3Scale(phys.velocity, 10.0);
         phys.mass = 1.0;
         set_transform_comp(id, trans);
         set_mesh_comp(id, msh);
