@@ -211,7 +211,7 @@ static void collision_iter(PhysicsComp * comp, Transform * transform, u32 id, fl
             if(hit){
                 trans.items[id].value.transform.translation = Vector3Add( trans.items[id].value.transform.translation, Vector3Scale(norm, 0.01));
                 comp->velocity = Vector3Reflect(comp->velocity, norm);
-                comp->velocity = Vector3Scale(comp->velocity, 0.9);
+                comp->velocity = Vector3Scale(comp->velocity, 0.9999);
                 break;
             }
         }

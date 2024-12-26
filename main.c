@@ -39,7 +39,7 @@ void TestEntity_on_tick(TestEntity * self, float delta_time){
     if(Vector3Distance(location, (Vector3){0,0,0})<1e-16){
         //add_force(id, gen_random_vector(10.0));
     } else{
-        add_force(id, Vector3Scale(location, -delta_time*0.1));
+        add_force(id, Vector3Scale(location, -delta_time*0.05));
     }
 }
 
@@ -55,22 +55,23 @@ void setup(){
     green= create_shader(LoadShader("shader/sbase.vs", "shaders/white.fs"));
     red = create_shader(LoadShader("shaders/base.vs", "shaders/red.fs"));
     msh.shader_id = white;
-    int max = 2000;
+    int max = 1000;
+    int movable_amnt = 1;
     for(int i =0; i<max; i++){
         TestEntity * entity = malloc(sizeof(TestEntity));
         memcpy(entity->bytes, "012345678910", 13);
         entity->entity.vtable = &TestEntityVTable;
         u32 id = create_entity((void*)entity).value;
-        assert(id == i);
         entity->entity.self_id = id;
         Transform transform;
         //transform.translation = (Vector3){4*cos((f32)i/max *2.0*PI), 4 *sin((f32)i/max *2.0*PI), 0};
-        transform.translation = gen_random_vector(40.0);
         float theta = random_float()*2*PI;
         float phi = random_float()*2*PI;
-        float radius = sqrt(random_float())*40.0;
+        float radius = sqrt(random_float())*30.0;
         float scale = 1.0;
-        msh.shader_id = id%2 == 0 ?white : red;
+        transform.translation = vec_from_sphere(radius, phi, theta);
+        msh.shader_id = i %movable_amnt == 0?  white: red;
+        msh.mesh_id = i%movable_amnt == 0 ? mesh_id : cube_id;
         transform.scale = (Vector3){scale, scale, scale};
         transform.rotation = (Quaternion){0.0, 0.0, 0.0, 1.0};
         TransformComp trans ={};
@@ -79,9 +80,11 @@ void setup(){
         phys.movable = 1;
         phys.box.max = (Vector3){0.1, 0.1, 0.1};
         phys.box.min = (Vector3){-0.1, -0.1, -0.1};
-        phys.velocity = Vector3Scale(Vector3Normalize(transform.translation), -1);
-        phys.velocity = Vector3Scale(phys.velocity, 2.0);
+        //phys.velocity = (Vector3){sin(theta), -cos(theta), 0};
+        phys.velocity = gen_random_vector(10.0);
+        phys.velocity = Vector3Scale(phys.velocity, sqrt(radius));
         phys.mass = 1.0;
+        phys.movable = i%movable_amnt==0 ;
         set_transform_comp(id, trans);
         set_mesh_comp(id, msh);
         set_physics_comp(id, phys);
