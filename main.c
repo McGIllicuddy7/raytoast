@@ -39,7 +39,7 @@ void TestEntity_on_tick(TestEntity * self, float delta_time){
     if(Vector3Distance(location, (Vector3){0,0,0})<1e-16){
         //add_force(id, gen_random_vector(10.0));
     } else{
-        add_force(id, Vector3Scale(location, -delta_time*50*1/(Vector3LengthSqr(location))));
+        add_force(id, Vector3Scale(location, -delta_time*0.1));
     }
 }
 
@@ -55,7 +55,7 @@ void setup(){
     green= create_shader(LoadShader("shader/sbase.vs", "shaders/white.fs"));
     red = create_shader(LoadShader("shaders/base.vs", "shaders/red.fs"));
     msh.shader_id = white;
-    int max = 8000;
+    int max = 2000;
     for(int i =0; i<max; i++){
         TestEntity * entity = malloc(sizeof(TestEntity));
         memcpy(entity->bytes, "012345678910", 13);
@@ -64,13 +64,13 @@ void setup(){
         assert(id == i);
         entity->entity.self_id = id;
         Transform transform;
-        transform.translation = (Vector3){128.0*cos((f32)i/max *2.0*PI), 128.0 *sin((f32)i/max *2.0*PI), 0};
+        //transform.translation = (Vector3){4*cos((f32)i/max *2.0*PI), 4 *sin((f32)i/max *2.0*PI), 0};
+        transform.translation = gen_random_vector(40.0);
         float theta = random_float()*2*PI;
         float phi = random_float()*2*PI;
         float radius = sqrt(random_float())*40.0;
-        //transform.translation = vec_from_sphere(radius, phi, theta);
         float scale = 1.0;
-        msh.shader_id = white;
+        msh.shader_id = id%2 == 0 ?white : red;
         transform.scale = (Vector3){scale, scale, scale};
         transform.rotation = (Quaternion){0.0, 0.0, 0.0, 1.0};
         TransformComp trans ={};
@@ -79,13 +79,13 @@ void setup(){
         phys.movable = 1;
         phys.box.max = (Vector3){0.1, 0.1, 0.1};
         phys.box.min = (Vector3){-0.1, -0.1, -0.1};
-        phys.velocity = (Vector3){-sin(theta)*cos(phi), -cos(theta)*sin(phi), 0};
-        phys.velocity = Vector3Scale(phys.velocity, 10.0);
+        phys.velocity = Vector3Scale(Vector3Normalize(transform.translation), -1);
+        phys.velocity = Vector3Scale(phys.velocity, 2.0);
         phys.mass = 1.0;
         set_transform_comp(id, trans);
         set_mesh_comp(id, msh);
         set_physics_comp(id, phys);
-        get_camera()->position = (Vector3){-20.0, 0,0};
+        get_camera()->position = (Vector3){-8.0, 0,0};
     }
 }
 void on_tick(){

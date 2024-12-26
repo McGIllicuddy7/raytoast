@@ -2,6 +2,8 @@
 #include "../runtime.h"
 #include <raymath.h>
 #include <rlgl.h>
+#define true 1
+#define false 0
 void run_physics();
 void finish_physics();
 void default_on_tick(void *f, f32 dt){
