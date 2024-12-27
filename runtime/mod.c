@@ -36,6 +36,10 @@ static void runtime_reserve(){
 static void process_events(){
     EventNode * current = RT.event_queue;
     while(current){
+        Entity * ent = get_entity(current->entity_id);
+        if(ent){
+            current->event(ent, current->args);
+        }
         current = current->next;
     }
 }

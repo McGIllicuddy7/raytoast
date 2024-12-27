@@ -39,7 +39,7 @@ void TestEntity_on_tick(TestEntity * self, float delta_time){
     if(Vector3Distance(location, (Vector3){0,0,0})<1e-16){
         //add_force(id, gen_random_vector(10.0));
     } else{
-        add_force(id, Vector3Scale(location, -delta_time*0.05));
+        add_force(id, Vector3Scale(location, -delta_time));
     }
 }
 
