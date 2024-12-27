@@ -14,6 +14,7 @@
 #include <errno.h>
 #include <stdint.h>
 #include <math.h>
+#include <pthread.h>
 /*
 	Initial Defines
 */
@@ -70,6 +71,7 @@ Arena stuff
 */
 
 typedef struct Arena{
+	pthread_mutex_t lock;
     char* buffer;
     char* next_ptr;
     char*end;
@@ -516,7 +518,9 @@ Arena * arena_create(){
     char * previous_allocation = 0;
     struct Arena * next = 0;
     Arena * out = (Arena*)global_alloc(1,sizeof(Arena));
-    *out = (Arena){buffer, next_ptr, end, previous_allocation, next};
+	pthread_mutex_t lck;
+	pthread_mutex_init(&lck,0);
+    *out = (Arena){lck,buffer, next_ptr, end, previous_allocation, next};
     return out;
 }
 
@@ -531,8 +535,10 @@ Arena * arena_create_sized(size_t reqsize){
     char * end = buffer+size;
     char * previous_allocation = 0;
     struct Arena * next = 0;
+	pthread_mutex_t lck;
+	pthread_mutex_init(&lck,0);
     Arena * out = (Arena*)global_alloc(1,sizeof(Arena));
-    *out = (Arena){buffer, next_ptr, end, previous_allocation, next};
+    *out = (Arena){lck,buffer, next_ptr, end, previous_allocation, next};
     return out;
 }
 
@@ -543,6 +549,7 @@ void arena_destroy(Arena * arena){
     }
     global_free(arena->buffer);
     arena_destroy(arena->next);
+	pthread_mutex_destroy(&arena->lock);
     global_free(arena);
 }
 
@@ -551,6 +558,7 @@ void * arena_alloc(Arena * arena, size_t size){
     if(!arena){
         return global_alloc(1,size);
     }
+	pthread_mutex_lock(&arena->lock);
     size_t act_sz = size+(8-size%8);
     char * previous = arena->next_ptr;
     if(previous + act_sz>arena->end){
@@ -558,13 +566,16 @@ void * arena_alloc(Arena * arena, size_t size){
             arena->next = arena_create_sized(size);
         }
         if (arena->next){
+			pthread_mutex_unlock(&arena->lock);
             return arena_alloc(arena->next, size);
         } else{
+			pthread_mutex_unlock(&arena->lock);
             return NULL;
         }
     }
     arena->next_ptr += act_sz;
     arena->previous_allocation = previous;
+	pthread_mutex_unlock(&arena->lock);
     return previous;
 }
 CTILS_STATIC
@@ -572,20 +583,24 @@ void * arena_realloc(Arena * arena, void * ptr, size_t previous_size, size_t new
     if(!arena){
         return global_realloc(ptr,new_size);
     }
+	pthread_mutex_lock(&arena->lock);
     size_t act_sz = new_size+(8-new_size%8);
     if (arena->previous_allocation == ptr && ptr){
         arena->next_ptr = (char*)ptr;
     }
     void * out = arena_alloc(arena, new_size);
     memmove(out, ptr, previous_size);
+	pthread_mutex_unlock(&arena->lock);
     return out;
 }
 
 CTILS_STATIC
 void arena_reset(Arena * arena){
+	pthread_mutex_lock(&arena->lock);
     arena_destroy(arena->next);
     arena->next_ptr= arena->buffer;
     arena->previous_allocation = 0;
+	pthread_mutex_unlock(&arena->lock);
 }
 
 CTILS_STATIC

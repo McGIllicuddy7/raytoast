@@ -4,6 +4,9 @@
 #include <raylib.h>
 #include "runtime/default_components.h"
 #include "resource.h"
+#include <pthread.h>
+#define true 1 
+#define false 0
 enable_option_type(u32);
 
 typedef struct {
@@ -19,6 +22,13 @@ typedef struct Entity{
     EntityVTable * vtable;
     u32 self_id;
 }Entity;
+typedef void (*Event)(void*self, void * args);
+typedef struct EventNode{
+    Event event;
+    void * args;
+    u32 entity_id;
+    struct EventNode * next;
+}EventNode;
 void default_on_tick(void *f, f32 dt);
 void default_on_setup(void*self ,u32 self_id);
 void default_on_render(void * self);
@@ -42,6 +52,7 @@ typedef struct {
     OptionMeshCompVec mesh_comps;
     Camera3D camera;
     bool failed_to_create;
+    EventNode * event_queue;
 }Runtime;
 
 #ifndef RUNTIME_MOD
@@ -75,3 +86,5 @@ bool remove_mesh(u32 id);
 Camera3D * get_camera();
 
 void add_force(u32 id, Vector3 force);
+
+void call_event(u32 id, void (*func)(void* self, void * args), void * args);

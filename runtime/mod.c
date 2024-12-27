@@ -33,8 +33,15 @@ static void runtime_reserve(){
         v_append(RT.physics_comps,(OptionPhysicsComp) {});
     }
 }
+static void process_events(){
+    EventNode * current = RT.event_queue;
+    while(current){
+        current = current->next;
+    }
+}
 
 void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
+    tmp_reset();
     RT.entities = (EntityRefVec)make(0, EntityRef);
     RT.meshes = ResourceMesh_new(UnloadMesh);
     RT.shaders = ResourceShader_new(UnloadShader);
@@ -109,6 +116,8 @@ void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
         on_render();
         EndDrawing();
         finish_physics();
+        process_events();
+        tmp_reset();
     }
     CloseWindow();
 }
@@ -273,5 +282,22 @@ void add_force(u32 id, Vector3 force){
     PhysicsComp * phys = get_physics_comp(id);
     if(phys){
         phys->velocity = Vector3Add(phys->velocity, Vector3Scale(force, 1/phys->mass));
+    }
+}
+void call_event(u32 id, void (*func)(void * self, void * args), void * args){
+    EventNode * node = tmp_alloc(sizeof(EventNode));
+    node->args = args;
+    node->event = func;
+    node->entity_id = id;
+    node->next = 0;
+    EventNode * current = RT.event_queue;
+    if(!current){
+        RT.event_queue = current;
+    }
+    else{
+        while(current->next){
+            current = current->next;
+        }
+        current->next = node;
     }
 }
