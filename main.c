@@ -100,7 +100,7 @@ void on_tick(){
     frame_count += 1;
 }
 void on_render(){
-    DrawFPS(1550, 100);
+    DrawFPS(1500, 100);
 }
 int main(void){
     init_runtime(setup, on_tick, on_render);
