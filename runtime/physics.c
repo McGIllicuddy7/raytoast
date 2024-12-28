@@ -17,6 +17,10 @@ typedef struct{
     float dt;
     volatile u64* done_flag;
 }PhysicsThreadArg;
+typedef struct {
+    Vector3 v1;
+    Vector3 v2;
+}VectorTuple;
 size_t hash_int3(Int3 i){
     return hash_bytes((void *)&i, sizeof(Int3));
 }
@@ -26,7 +30,7 @@ bool Int3_equals(Int3 a, Int3 b){
 enable_vec_type(u32);
 enable_hash_type(Int3, u32Vec);
 static Int3u32VecHashTable *table = 0;
-const float tile_size= 0.4;
+const float tile_size= 0.5;
 static OptionPhysicsCompVec phys ={};
 static OptionTransformCompVec trans = {};
 static pthread_t phys_thread = {0};
@@ -59,44 +63,25 @@ static float bb_distance(BoundingBox a, BoundingBox b){
     return distance;
 }
 static Vector3 box_collision_normal_vector(BoundingBox a, BoundingBox b){
-    float dels[6] = {
-        a.min.x-b.max.x, 
-        a.max.x-b.min.x, 
-        a.min.y-b.max.y,
-        a.max.y-b.min.y, 
-        a.min.z-b.max.z, 
-        a.max.z-b.min.z
-    };
-    int id = 0;
-    float min = dels[0];
-    for(int i =0; i<6; i++){
-        float ab = dels[i];
-        if(ab<min){
-            id = i;
-            min =ab;
-        }
-    }
-    if(id == 0){
-        return (Vector3){-1,0,0};
-    }
-    if(id == 1){
+    Vector3 norms[] = {{1,0,0}, {-1, 0,0}, {0,1,0}, {0,-1,0}, {0,0,1}, {0,0,-1}};
+    Vector3 av = Vector3Scale(Vector3Add(a.max, a.min), 0.5);
+    Vector3 bv = Vector3Scale(Vector3Add(b.max, b.min), 0.5);
+    Vector3 del = Vector3Subtract(bv, av);
+    float length = Vector3Length(del);
+    if(length<0.0001){
         return (Vector3){1,0,0};
     }
-
-    if(id == 2){
-        return (Vector3){0,-1,0};
+    Vector3 norm = Vector3Scale(del, 1/length);
+    int idx = 0;
+    float min = 1000000.0;
+    for(int i =0; i<6; i++){
+        float dot = Vector3DotProduct(norm, norms[i]);
+        if(dot<min){
+            idx =i;
+            min = dot;
+        }
     }
-    if(id == 3){
-        return (Vector3){0,1,0}; 
-    }
-
-    if(id ==4){
-        return (Vector3){0,0,-1}; 
-    }
-    if(id == 5){
-        return (Vector3){0,0,1}; 
-    }
-    return (Vector3){0,0,0};
+    return norms[idx];
 }
 static float min_dimension(BoundingBox bx){
     return min((bx.max.x-bx.min.x),min((bx.max.y-bx.min.y), (bx.max.z-bx.min.z)));
@@ -158,7 +143,7 @@ static bool check_hit(u32 id, Vector3 * normal,u32 * other_hit){
                         b2.min = Vector3Add(b2.min, trans.items[id1].value.transform.translation);
                         bool hit = CheckCollisionBoxes(b1, b2);
                         if(hit){
-                            Vector3 norm = box_collision_normal_vector(b1, b2);
+                            const Vector3 norm = box_collision_normal_vector(b1, b2);
                             *normal=  norm;
                             *other_hit = i;
                             return true;
@@ -170,6 +155,24 @@ static bool check_hit(u32 id, Vector3 * normal,u32 * other_hit){
         }
     }
     return false;
+}
+
+static VectorTuple calc_hit_impulses(u32 id1, u32 id2, Vector3 normal_vector,float drag){
+    //va2 = (ma-mb)/(ma+mb)va1+(2mb)/(ma+mb)vb1
+    //vb2 = (2ma)/(ma+mb)va1+(mb-ma)/(ma+mb)vb1
+    const Vector3 base_a1 = get_physics_comp(id1)->velocity;
+    const Vector3 base_b1= get_physics_comp(id2)->velocity;
+    const float va1 = Vector3DotProduct(get_physics_comp(id1)->velocity, normal_vector);
+    const float vb1 = Vector3DotProduct(get_physics_comp(id2)->velocity, normal_vector);
+    const float ma = get_physics_comp(id1)->mass;
+    const float mb = get_physics_comp(id2)->mass;
+    const float va2 = ((ma-mb)/(ma+mb)*va1+(2*mb)/(ma+mb)*vb1)*drag; 
+    const float vb2 = ((2*ma)/(ma+mb)*va1+(mb-ma)/(ma+mb)*vb1)*drag;
+    const float dela = va2-va1;
+    const float delb = vb2-vb1;
+    const Vector3 va =Vector3Scale(normal_vector, dela);
+    const Vector3 vb = Vector3Scale(normal_vector, delb);
+    return (VectorTuple){Vector3Add(base_a1, va),Vector3Add(base_b1, vb)};
 }
 static void collision_iter(PhysicsComp * comp, Transform * transform, u32 id, float dt){
     if(!comp->movable){
@@ -191,7 +194,7 @@ static void collision_iter(PhysicsComp * comp, Transform * transform, u32 id, fl
         bool check = false;
         Vector3 old_location = trans.items[id].value.transform.translation ; 
         if(max_distance <= 0.01){
-            assert(max_distance>-0.01);
+            assert(max_distance>-0.1);
             max_distance = min;
             check = true;
         }
@@ -209,9 +212,21 @@ static void collision_iter(PhysicsComp * comp, Transform * transform, u32 id, fl
             Vector3 norm = {};
             bool hit = check_hit(id, &norm, &other);
             if(hit){
-                trans.items[id].value.transform.translation = Vector3Add( trans.items[id].value.transform.translation, Vector3Scale(norm, 0.01));
-                comp->velocity = Vector3Reflect(comp->velocity, norm);
-                comp->velocity = Vector3Scale(comp->velocity, 0.9999);
+                trans.items[id].value.transform.translation = old_location;
+                int other_old = other;
+                Vector3 old_norm = norm;
+                if(check_hit(id, &norm, &other)){
+                    trans.items[id].value.transform.translation = Vector3Add(trans.items[id].value.transform.translation, Vector3Scale(norm, 0.01));
+                    other_old = other;
+                    old_norm = norm;
+                }
+                if(get_physics_comp(other_old)->movable){
+                    VectorTuple tup = calc_hit_impulses(id, other_old, old_norm, 1.0);
+                    comp->velocity = tup.v1;
+                    get_physics_comp(other_old)->velocity = tup.v2;
+                } else{
+                    comp->velocity = Vector3Reflect(comp->velocity, old_norm);
+                }
                 break;
             }
         }

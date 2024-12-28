@@ -111,8 +111,14 @@ void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
                 trans->transform.translation.y, trans->transform.translation.z);
                 Matrix rot = QuaternionToMatrix(trans->transform.rotation);
                 Matrix scale = MatrixScale(trans->transform.scale.x, trans->transform.scale.y, trans->transform.scale.z);
-                Matrix transform = MatrixMultiply(loc, MatrixMultiply(rot, scale));
+                Matrix transform = MatrixMultiply(rot,MatrixMultiply(scale, loc));
                 PhysicsComp * cmp = get_physics_comp(i);
+                if(cmp){
+                    BoundingBox bb = cmp->box;
+                    bb.max = Vector3Add(bb.max, trans->transform.translation);
+                    bb.min = Vector3Add(bb.min, trans->transform.translation); 
+                    DrawBoundingBox(bb, GREEN);
+                }
                 DrawMesh(msh.value, mat,transform);
             }
         }

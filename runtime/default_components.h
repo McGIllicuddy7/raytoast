@@ -20,6 +20,7 @@ typedef struct{
     float mass;
     bool collided_this_frame;
     bool movable;
+    bool can_bounce;
 }PhysicsComp;
 enable_option_type(PhysicsComp);
 enable_vec_type(OptionPhysicsComp);
