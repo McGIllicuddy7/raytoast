@@ -17,7 +17,6 @@ float random_float(){
    return GetRandomValue(0,10'000)/(10'000.0);
 }
 Vector3 gen_random_vector(float in_radius){
-    
     float radius = sqrt(random_float());
     radius*= in_radius;
     float phi = random_float()*2*PI;
@@ -55,8 +54,8 @@ void setup(){
     green= create_shader(LoadShader("shader/sbase.vs", "shaders/white.fs"));
     red = create_shader(LoadShader("shaders/base.vs", "shaders/red.fs"));
     msh.shader_id = white;
-    int max = 100;
-    int movable_amnt = 10;
+    int max = 1000;
+    int movable_amnt = 2;
     for(int i =0; i<max; i++){
         TestEntity * entity = malloc(sizeof(TestEntity));
         memcpy(entity->bytes, "012345678910", 13);
