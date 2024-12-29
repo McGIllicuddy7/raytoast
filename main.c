@@ -105,6 +105,8 @@ void on_tick(){
 void on_render(){
     DrawFPS(1500, 100);
 }
+extern char * hello_from_rust(int f);
 int main(void){
-    init_runtime(setup, on_tick, on_render);
+    printf("%s\n", hello_from_rust(10));
+    //init_runtime(setup, on_tick, on_render);
 } 
