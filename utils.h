@@ -103,6 +103,7 @@ void arena_reset(Arena * arena);
 #define tmp_realloc(ptr,size, new_size) arena_realloc(&temporary_allocator, size, new_size)
 #define tmp_free(ptr) arena_free(&temporary_allocator, ptr)
 #define tmp_reset() arena_reset(&temporary_allocator)
+#define tmp_init() temporary_allocator = *arena_create()
 #ifndef CTILS_IMPLEMENTATION
 extern Arena temporary_allocator;
 #endif

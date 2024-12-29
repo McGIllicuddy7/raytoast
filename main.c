@@ -111,5 +111,6 @@ void on_render(){
 }
 
 int main(void){
+    temporary_allocator = *arena_create();
     init_runtime(setup, on_tick, on_render);
 } 

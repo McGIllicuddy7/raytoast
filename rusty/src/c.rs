@@ -1,4 +1,6 @@
-use std::ffi::c_void;
+use std::{ffi::c_void, mem::ManuallyDrop};
+
+use libc::memcpy;
 #[allow(unused)]
 /* 
 struct EntityVTable{
@@ -27,17 +29,18 @@ pub type OnTick = *const extern fn(*const c_void,f32);
 pub type OnRender = *const extern fn(*const c_void);
 pub type OnSetup = *const extern fn(*const c_void, u32);
 pub type Destructor = *const extern fn (*const c_void);
+#[allow(unused)]
 pub trait Entity{
-    fn on_tick(&self, _dt:f32){
+    fn on_tick(&mut self, dt:f32){
 
     }
     fn on_render(&self){
 
     }
-    fn on_setup(&self, _id:u32){
+    fn on_setup(&mut self, id:u32){
 
     }
-    fn destructor(&self){
+    fn destructor(&mut self){
 
     }
 } 
@@ -46,6 +49,28 @@ pub trait Entity{
 pub struct CEntity{
     pub vtable:*const EntityVTable, 
     pub self_id:u32,
+}
+impl Entity for CEntity{
+    fn on_tick(&mut self, dt:f32){
+        unsafe{
+            (*((*self.vtable).on_tick))(self as *mut Self as *mut c_void, dt)
+        }
+    }
+    fn on_render(&self){
+        unsafe{
+            (*((*self.vtable).on_render))(self as *const Self as *mut c_void)
+        }
+    }
+    fn on_setup(&mut self, id:u32){
+        unsafe{
+            (*((*self.vtable).on_setup))(self as *const Self as *mut c_void,id)
+        }
+    }
+    fn destructor(&mut self){
+        unsafe{
+            (*((*self.vtable).destructor))(self as *const Self as *mut c_void)
+        }
+    } 
 }
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -116,10 +141,23 @@ pub struct PhysicsComp{
 }
 pub mod c_funcs{        
     use super::*;
+    #[repr(C)]
+    #[derive(Clone, Copy)]
+    pub struct Arena{
+        lock:libc::pthread_mutex_t, 
+        buffer:*const i8, 
+        next_ptr:*const i8, 
+        end:*const i8, 
+        previous_allocation: *const i8, 
+        next:*mut Arena, 
+    }
+    extern "C"{
+        static temporary_allocator:Arena;
+    }
     #[allow(unused)]
     extern "C"{
         pub fn malloc(_:usize)->*const c_void;
-        pub fn tmp_alloc(_:usize)->*const c_void;
+        pub fn arena_alloc(arena:*mut Arena, size:usize)->*mut c_void;
         pub fn DrawText(text: *const i8, posx:i32, posy:i32, font_size:i32,color:Color);
         pub fn create_entity(ent:*mut CEntity)->Optu32;
         pub fn destroy_entity(id:u32);
@@ -137,7 +175,10 @@ pub mod c_funcs{
         pub fn set_mesh_comp(id:u32,mesh:MeshComp)->bool;
         pub fn get_mesh_comp(id:u32)->*mut MeshComp;
         pub fn remove_mesh_comp(id:u32)->bool;
-        fn call_event(id:u32, event:*const extern fn (this:*const c_void, args:*const c_void),args:*const c_void);
+        pub fn call_event(id:u32, event:*const extern fn (this:*mut CEntity, args:*const c_void),args:*const c_void);
+    }
+    pub unsafe fn tmp_alloc(size:usize)->*mut c_void{
+        arena_alloc(&temporary_allocator as*const Arena as *mut Arena, size)
     }
 }
 
@@ -247,10 +288,22 @@ pub fn remove_mesh_comp(id:u32)->bool{
     }
 }
 
-pub fn call_event<T:Entity, U:Fn(&mut T)+Clone>(id:u32, event:&U){
-    let bx = Box::new(event.clone());
-    let event =bx.as_ref() as *const dyn Fn(&mut T);
-    let func = (&event) as *const *const dyn Fn(&mut T); 
-    let env = unsafe{func.offset(8)};
-    todo!()
+
+pub fn call_event<T:Entity>(id:u32, func:Box<dyn Fn(&mut T)>){
+    extern "C" fn thunk<T:Entity>(ent:*mut c_void,args:*const c_void){
+        assert!(!ent.is_null());
+        unsafe{
+            let entity = (ent as *mut T).as_mut().unwrap();
+            let func = std::ptr::read(args as *const Box<dyn Fn(&mut dyn Entity)>);
+            func(entity);
+        }  
+
+    }
+    unsafe{
+        func((get_entity(&id).expect("msg") as *mut CEntity as * mut T).as_mut().expect("msg"));
+        let arrrrg = c_funcs::tmp_alloc(size_of::<Box<dyn Fn(&mut dyn Entity)>>()) as *mut Box<dyn Fn(&mut T)>;
+        memcpy(arrrrg as *mut c_void, func.as_ref() as *const dyn Fn(&mut T) as *mut c_void, 16);
+        let _ =  ManuallyDrop::new(func);
+        c_funcs::call_event(id, thunk::<T> as *const extern "C" fn (*mut CEntity, *const c_void), arrrrg as *const c_void);
+    }
 }

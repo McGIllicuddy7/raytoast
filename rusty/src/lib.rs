@@ -9,25 +9,44 @@ struct TestEntity{
     pub base_class:CEntity, 
 }
 impl Entity for TestEntity{
-
+    fn on_render(&self) {
+        draw_text("lol",500, 500, 48, Color { r: 255, g: 255, b: 255, a: 255 });
+    }
+}
+static TEST_ENTITY_VTABLE:EntityVTable = EntityVTable{on_tick:TestEntity::on_tick as OnTick,on_render:TestEntity::on_render as OnRender, on_setup:TestEntity::on_setup as OnSetup, destructor:no_op_drop as Destructor};
+impl TestEntity{
+    pub fn new()->Self{
+        let base_class = CEntity{vtable: & TEST_ENTITY_VTABLE as *const EntityVTable, self_id:0};
+        return Self { base_class}
+    }
 }
 
 
 
-static TEST_ENTITY_VTABLE:EntityVTable = EntityVTable{on_tick:TestEntity::on_tick as OnTick,on_render:TestEntity::on_render as OnRender, on_setup:TestEntity::on_setup as OnSetup, destructor:no_op_drop as Destructor};
+
 #[allow(unused)]
 extern {
     static entity_default_vtable:EntityVTable;
 }
+fn test_event(ent:&mut TestEntity){
+    println!("hello world!");
+}
 #[no_mangle]
 pub extern "C" fn create_test_rust_entity()->*const CEntity{
-    unsafe{
-        let ent = c_funcs::malloc(size_of::<TestEntity>())as *mut  CEntity;
-        let ents = ent.as_mut().unwrap();
-        
-        ents.vtable = &TEST_ENTITY_VTABLE as *const EntityVTable;
-        return ent;
+    let ent =TestEntity::new();
+    let out = create_entity(ent);
+    if let Some(id) = out{
+        call_event(id, Box::new(&test_event));
+        let t =  get_entity(&id);
+        if let Some(out) = t{
+            return out as *const CEntity
+        } else{
+            assert!(false);
+            return std::ptr::null()
+        }
     }
+    assert!(false);
+    return std::ptr::null()
 }
 #[no_mangle]
 pub extern "C" fn hello_from_rust(f:i32)->*const u8{
