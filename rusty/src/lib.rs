@@ -1,5 +1,5 @@
 use std::ffi::c_void;
-
+#[allow(unused)]
 /* 
 struct EntityVTable{
     void (*on_tick)(void * self, f32 delta_time),
