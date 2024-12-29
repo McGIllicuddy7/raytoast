@@ -1,4 +1,4 @@
-use std::ffi::c_void;
+use std::ffi::{c_void, CStr, CString};
 #[allow(unused)]
 /* 
 struct EntityVTable{
@@ -15,26 +15,35 @@ struct Entity{
 }*/
 #[repr(C)]
 #[derive(Copy, Clone)]
-struct EntityVTable {
-    on_tick:*const fn(*const c_void,f32), 
-    on_render:*const fn(*const c_void), 
-    on_setup:*const fn(*const c_void, u32),
-    destructor:*const fn(*const c_void),
+pub struct EntityVTable {
+    on_tick:*const extern fn(*const c_void,f32), 
+    on_render:*const extern fn(*const c_void), 
+    on_setup:*const extern fn(*const c_void, u32),
+    destructor:*const extern fn(*const c_void),
 }
 unsafe impl Send for EntityVTable{}
 unsafe impl Sync for EntityVTable{}
-type OnTick = *const fn(*const c_void,f32);
-type OnRender = *const fn(*const c_void);
-type OnSetup = *const fn(*const c_void, u32);
-type Destructor = *const fn (*const c_void);
+type OnTick = *const extern fn(*const c_void,f32);
+type OnRender = *const extern fn(*const c_void);
+type OnSetup = *const extern fn(*const c_void, u32);
+type Destructor = *const extern fn (*const c_void);
 #[derive(Copy, Clone)]
 #[repr(C)]
-struct Entity{
+pub struct Entity{
     pub vtable:*const EntityVTable, 
     pub self_id:u32,
 } 
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct Color{
+    pub r:u8, 
+    pub g:u8, 
+    pub b:u8,
+    pub a:u8
+}
 extern "C"{
     pub fn malloc(_:usize)->*const c_void;
+    pub fn DrawText(text: *const i8, posx:i32, posy:i32, font_size:i32,color:Color);
 }
 struct TestEntity{
     pub base_class:Entity, 
@@ -44,7 +53,9 @@ impl TestEntity{
         println!("hello from rust");
     }
     pub fn on_render(&self){
-
+        unsafe{
+            DrawText(CString::new("hello from rust").expect("msg").as_ptr() , 500, 500, 12,Color { r: 255, g: 255, b: 255, a: 255 });
+        }
     }
     pub fn on_setup(&mut self,id:u32){
         self.base_class.self_id = id;
@@ -59,7 +70,7 @@ extern {
     static entity_default_vtable:EntityVTable;
 }
 #[no_mangle]
-extern fn create_test_rust_entity()->*const Entity{
+pub extern "C" fn create_test_rust_entity()->*const Entity{
     unsafe{
         let ent = malloc(size_of::<TestEntity>())as *mut  Entity;
         let ents = ent.as_mut().unwrap();

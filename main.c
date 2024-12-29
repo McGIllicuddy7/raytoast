@@ -13,6 +13,8 @@ EntityVTable TestEntityVTable = {.destructor  = default_on_destroy, .on_render =
 static u32 red;
 static u32 white;
 static u32 green;
+extern char * hello_from_rust(int f);
+extern Entity * create_test_rust_entity();
 float random_float(){
    return GetRandomValue(0,10'000)/(10'000.0);
 }
@@ -93,6 +95,8 @@ void setup(){
         set_physics_comp(id, phys);
         get_camera()->position = (Vector3){-8.0, 0,0};
     }
+    Entity * ent = create_test_rust_entity();
+    create_entity(ent);
 }
 void on_tick(){
     static u128 frame_count = 0;
@@ -105,8 +109,7 @@ void on_tick(){
 void on_render(){
     DrawFPS(1500, 100);
 }
-extern char * hello_from_rust(int f);
+
 int main(void){
-    printf("%s\n", hello_from_rust(10));
-    //init_runtime(setup, on_tick, on_render);
+    init_runtime(setup, on_tick, on_render);
 } 
