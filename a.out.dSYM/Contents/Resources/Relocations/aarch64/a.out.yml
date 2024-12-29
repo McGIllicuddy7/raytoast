@@ -2,26 +2,26 @@
 triple:          'arm64-apple-darwin'
 binary-path:     a.out
 relocations:
-  - { offset: 0x6BC3, size: 0x8, addend: 0x0, symName: '__ZN4core4iter5range101_$LT$impl$u20$core..iter..traits..iterator..Iterator$u20$for$u20$core..ops..range..Range$LT$A$GT$$GT$4next17h778c949b262e4990E', symObjAddr: 0x0, symBinAddr: 0x100005DF0, symSize: 0x24 }
-  - { offset: 0x6BE4, size: 0x8, addend: 0x0, symName: '__ZN4core4iter5range101_$LT$impl$u20$core..iter..traits..iterator..Iterator$u20$for$u20$core..ops..range..Range$LT$A$GT$$GT$4next17h778c949b262e4990E', symObjAddr: 0x0, symBinAddr: 0x100005DF0, symSize: 0x24 }
-  - { offset: 0x6C21, size: 0x8, addend: 0x0, symName: '__ZN89_$LT$core..ops..range..Range$LT$T$GT$$u20$as$u20$core..iter..range..RangeIteratorImpl$GT$9spec_next17h344133c446b73cb2E', symObjAddr: 0x38, symBinAddr: 0x100005E28, symSize: 0x90 }
-  - { offset: 0x6CAC, size: 0x8, addend: 0x0, symName: '__ZN63_$LT$I$u20$as$u20$core..iter..traits..collect..IntoIterator$GT$9into_iter17h1fe4a69406ca29d9E', symObjAddr: 0x24, symBinAddr: 0x100005E14, symSize: 0x14 }
-  - { offset: 0x6E0F, size: 0x8, addend: 0x0, symName: __ZN5rusty1c6Entity7on_tick17h63f7263e0dbf453bE, symObjAddr: 0x0, symBinAddr: 0x100005EB8, symSize: 0x14 }
-  - { offset: 0x6E57, size: 0x8, addend: 0x0, symName: __ZN5rusty1c6Entity7on_tick17h63f7263e0dbf453bE, symObjAddr: 0x0, symBinAddr: 0x100005EB8, symSize: 0x14 }
-  - { offset: 0x6E99, size: 0x8, addend: 0x0, symName: __ZN5rusty1c6Entity9on_render17h0fca397f326556b5E, symObjAddr: 0x14, symBinAddr: 0x100005ECC, symSize: 0x10 }
-  - { offset: 0x6ECC, size: 0x8, addend: 0x0, symName: __ZN5rusty1c6Entity8on_setup17hb1937f2a8c8c7997E, symObjAddr: 0x24, symBinAddr: 0x100005EDC, symSize: 0x14 }
-  - { offset: 0x7042, size: 0x8, addend: 0x0, symName: _create_test_rust_entity, symObjAddr: 0x0, symBinAddr: 0x100005EF0, symSize: 0x98 }
-  - { offset: 0x7062, size: 0x8, addend: 0x0, symName: __ZN5rusty16TestEntityVtable17hddeca3fb07798e9cE, symObjAddr: 0x190, symBinAddr: 0x1000DC6F0, symSize: 0x0 }
-  - { offset: 0x70E5, size: 0x8, addend: 0x0, symName: _create_test_rust_entity, symObjAddr: 0x0, symBinAddr: 0x100005EF0, symSize: 0x98 }
-  - { offset: 0x716F, size: 0x8, addend: 0x0, symName: _hello_from_rust, symObjAddr: 0x98, symBinAddr: 0x100005F88, symSize: 0xD0 }
-  - { offset: 0x74B5, size: 0x8, addend: 0x0, symName: '__ZN4core3ptr7mut_ptr31_$LT$impl$u20$$BP$mut$u20$T$GT$6as_mut17h03ced99381f45d81E', symObjAddr: 0x0, symBinAddr: 0x100006058, symSize: 0x3C }
-  - { offset: 0x7542, size: 0x8, addend: 0x0, symName: '__ZN4core3ptr7mut_ptr31_$LT$impl$u20$$BP$mut$u20$T$GT$6as_mut17h03ced99381f45d81E', symObjAddr: 0x0, symBinAddr: 0x100006058, symSize: 0x3C }
-  - { offset: 0x77CA, size: 0x8, addend: 0x0, symName: __ZN4core4hint21unreachable_unchecked18precondition_check17h67a88b794c262d01E, symObjAddr: 0x0, symBinAddr: 0x100006094, symSize: 0x1C }
-  - { offset: 0x77E7, size: 0x8, addend: 0x0, symName: __ZN4core4hint21unreachable_unchecked18precondition_check17h67a88b794c262d01E, symObjAddr: 0x0, symBinAddr: 0x100006094, symSize: 0x1C }
-  - { offset: 0x7821, size: 0x8, addend: 0x0, symName: __ZN5rusty1c10no_op_drop17h9a53a082602bcc33E, symObjAddr: 0x0, symBinAddr: 0x1000060B0, symSize: 0x10 }
-  - { offset: 0x7864, size: 0x8, addend: 0x0, symName: __ZN5rusty1c10no_op_drop17h9a53a082602bcc33E, symObjAddr: 0x0, symBinAddr: 0x1000060B0, symSize: 0x10 }
-  - { offset: 0x78B6, size: 0x8, addend: 0x0, symName: __ZN4core3fmt9Arguments9new_const17h0130c2c9168b6d6dE, symObjAddr: 0x0, symBinAddr: 0x1000060C0, symSize: 0x48 }
-  - { offset: 0x7DF9, size: 0x8, addend: 0x0, symName: __ZN4core3fmt9Arguments9new_const17h0130c2c9168b6d6dE, symObjAddr: 0x0, symBinAddr: 0x1000060C0, symSize: 0x48 }
-  - { offset: 0x7E3A, size: 0x8, addend: 0x0, symName: '__ZN47_$LT$i32$u20$as$u20$core..iter..range..Step$GT$17forward_unchecked17h8360d89f33b329e4E', symObjAddr: 0x0, symBinAddr: 0x100006108, symSize: 0xB0 }
-  - { offset: 0x8022, size: 0x8, addend: 0x0, symName: '__ZN47_$LT$i32$u20$as$u20$core..iter..range..Step$GT$17forward_unchecked17h8360d89f33b329e4E', symObjAddr: 0x0, symBinAddr: 0x100006108, symSize: 0xB0 }
+  - { offset: 0x6BC3, size: 0x8, addend: 0x0, symName: '__ZN4core4iter5range101_$LT$impl$u20$core..iter..traits..iterator..Iterator$u20$for$u20$core..ops..range..Range$LT$A$GT$$GT$4next17h778c949b262e4990E', symObjAddr: 0x0, symBinAddr: 0x100005DF8, symSize: 0x24 }
+  - { offset: 0x6BE4, size: 0x8, addend: 0x0, symName: '__ZN4core4iter5range101_$LT$impl$u20$core..iter..traits..iterator..Iterator$u20$for$u20$core..ops..range..Range$LT$A$GT$$GT$4next17h778c949b262e4990E', symObjAddr: 0x0, symBinAddr: 0x100005DF8, symSize: 0x24 }
+  - { offset: 0x6C21, size: 0x8, addend: 0x0, symName: '__ZN89_$LT$core..ops..range..Range$LT$T$GT$$u20$as$u20$core..iter..range..RangeIteratorImpl$GT$9spec_next17h344133c446b73cb2E', symObjAddr: 0x38, symBinAddr: 0x100005E30, symSize: 0x90 }
+  - { offset: 0x6CAC, size: 0x8, addend: 0x0, symName: '__ZN63_$LT$I$u20$as$u20$core..iter..traits..collect..IntoIterator$GT$9into_iter17h1fe4a69406ca29d9E', symObjAddr: 0x24, symBinAddr: 0x100005E1C, symSize: 0x14 }
+  - { offset: 0x6E0F, size: 0x8, addend: 0x0, symName: __ZN5rusty1c6Entity7on_tick17hf3a1f57e0f4a480eE, symObjAddr: 0x0, symBinAddr: 0x100005EC0, symSize: 0x14 }
+  - { offset: 0x6E57, size: 0x8, addend: 0x0, symName: __ZN5rusty1c6Entity7on_tick17hf3a1f57e0f4a480eE, symObjAddr: 0x0, symBinAddr: 0x100005EC0, symSize: 0x14 }
+  - { offset: 0x6E99, size: 0x8, addend: 0x0, symName: __ZN5rusty1c6Entity9on_render17h3dc352a80b17f81bE, symObjAddr: 0x14, symBinAddr: 0x100005ED4, symSize: 0x10 }
+  - { offset: 0x6ECC, size: 0x8, addend: 0x0, symName: __ZN5rusty1c6Entity8on_setup17h2984da721331a37bE, symObjAddr: 0x24, symBinAddr: 0x100005EE4, symSize: 0x14 }
+  - { offset: 0x7042, size: 0x8, addend: 0x0, symName: _create_test_rust_entity, symObjAddr: 0x0, symBinAddr: 0x100005EF8, symSize: 0x98 }
+  - { offset: 0x7062, size: 0x8, addend: 0x0, symName: __ZN5rusty18TEST_ENTITY_VTABLE17h187cf2e6fffb9154E, symObjAddr: 0x188, symBinAddr: 0x1000DC6F0, symSize: 0x0 }
+  - { offset: 0x70E5, size: 0x8, addend: 0x0, symName: _create_test_rust_entity, symObjAddr: 0x0, symBinAddr: 0x100005EF8, symSize: 0x98 }
+  - { offset: 0x716F, size: 0x8, addend: 0x0, symName: _hello_from_rust, symObjAddr: 0x98, symBinAddr: 0x100005F90, symSize: 0xC8 }
+  - { offset: 0x74A0, size: 0x8, addend: 0x0, symName: '__ZN4core3ptr7mut_ptr31_$LT$impl$u20$$BP$mut$u20$T$GT$6as_mut17h03ced99381f45d81E', symObjAddr: 0x0, symBinAddr: 0x100006058, symSize: 0x3C }
+  - { offset: 0x752D, size: 0x8, addend: 0x0, symName: '__ZN4core3ptr7mut_ptr31_$LT$impl$u20$$BP$mut$u20$T$GT$6as_mut17h03ced99381f45d81E', symObjAddr: 0x0, symBinAddr: 0x100006058, symSize: 0x3C }
+  - { offset: 0x77B5, size: 0x8, addend: 0x0, symName: __ZN4core4hint21unreachable_unchecked18precondition_check17h67a88b794c262d01E, symObjAddr: 0x0, symBinAddr: 0x100006094, symSize: 0x1C }
+  - { offset: 0x77D2, size: 0x8, addend: 0x0, symName: __ZN4core4hint21unreachable_unchecked18precondition_check17h67a88b794c262d01E, symObjAddr: 0x0, symBinAddr: 0x100006094, symSize: 0x1C }
+  - { offset: 0x780C, size: 0x8, addend: 0x0, symName: __ZN5rusty1c10no_op_drop17h9a53a082602bcc33E, symObjAddr: 0x0, symBinAddr: 0x1000060B0, symSize: 0x10 }
+  - { offset: 0x784F, size: 0x8, addend: 0x0, symName: __ZN5rusty1c10no_op_drop17h9a53a082602bcc33E, symObjAddr: 0x0, symBinAddr: 0x1000060B0, symSize: 0x10 }
+  - { offset: 0x78A1, size: 0x8, addend: 0x0, symName: __ZN4core3fmt9Arguments9new_const17h0130c2c9168b6d6dE, symObjAddr: 0x0, symBinAddr: 0x1000060C0, symSize: 0x48 }
+  - { offset: 0x7DE4, size: 0x8, addend: 0x0, symName: __ZN4core3fmt9Arguments9new_const17h0130c2c9168b6d6dE, symObjAddr: 0x0, symBinAddr: 0x1000060C0, symSize: 0x48 }
+  - { offset: 0x7E25, size: 0x8, addend: 0x0, symName: '__ZN47_$LT$i32$u20$as$u20$core..iter..range..Step$GT$17forward_unchecked17h8360d89f33b329e4E', symObjAddr: 0x0, symBinAddr: 0x100006108, symSize: 0xB0 }
+  - { offset: 0x800D, size: 0x8, addend: 0x0, symName: '__ZN47_$LT$i32$u20$as$u20$core..iter..range..Step$GT$17forward_unchecked17h8360d89f33b329e4E', symObjAddr: 0x0, symBinAddr: 0x100006108, symSize: 0xB0 }
 ...

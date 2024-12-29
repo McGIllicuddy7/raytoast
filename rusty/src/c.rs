@@ -1,4 +1,4 @@
-use std::ffi::{c_void, CStr, CString};
+use std::ffi::c_void;
 #[allow(unused)]
 /* 
 struct EntityVTable{
@@ -28,13 +28,13 @@ pub type OnRender = *const extern fn(*const c_void);
 pub type OnSetup = *const extern fn(*const c_void, u32);
 pub type Destructor = *const extern fn (*const c_void);
 pub trait Entity{
-    fn on_tick(&self, dt:f32){
+    fn on_tick(&self, _dt:f32){
 
     }
     fn on_render(&self){
 
     }
-    fn on_setup(&self, id:u32){
+    fn on_setup(&self, _id:u32){
 
     }
     fn destructor(&self){
@@ -42,6 +42,7 @@ pub trait Entity{
     }
 } 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub struct CEntity{
     pub vtable:*const EntityVTable, 
     pub self_id:u32,
@@ -118,6 +119,7 @@ pub mod c_funcs{
     #[allow(unused)]
     extern "C"{
         pub fn malloc(_:usize)->*const c_void;
+        pub fn tmp_alloc(_:usize)->*const c_void;
         pub fn DrawText(text: *const i8, posx:i32, posy:i32, font_size:i32,color:Color);
         pub fn create_entity(ent:*mut CEntity)->Optu32;
         pub fn destroy_entity(id:u32);
@@ -139,7 +141,116 @@ pub mod c_funcs{
     }
 }
 
-
 pub fn no_op_drop(_:*const c_void){
 
+}
+pub fn create_entity<T:Entity>(entity:T)->Option<u32>{
+    let v= unsafe{
+        let ent = c_funcs::malloc(size_of::<T>())as *mut T;
+
+        let ents = ent.as_mut().unwrap();
+        *ents = entity;
+        c_funcs::create_entity(ent as *mut CEntity)
+    };
+    if v.valid{
+        Some(v.value)
+    } else{
+        None
+    }
+}
+#[allow(unused)]
+pub fn draw_text(text:&str, posx:i32, posy:i32, font_size:i32,color:Color){
+    let txt = text.to_owned() + "\0";
+    unsafe {
+        c_funcs::DrawText(txt.as_ptr() as *const i8, posx, posy, font_size, color);
+    }
+}
+pub fn destroy_entity(id:u32){
+    unsafe{
+        c_funcs::destroy_entity(id);
+    }
+}
+pub fn get_entity<'a>(id:&'a u32)->Option<&'a mut CEntity>{
+    unsafe{
+        let out= c_funcs::get_entity(*id);
+        if out.is_null(){
+            None
+        } else{
+            out.as_mut() 
+        }
+    }
+}
+pub fn add_force(id:u32, force:Vector3){
+    unsafe {
+        c_funcs::add_force(id, force);
+    }
+}
+
+pub fn set_transform_comp(id:u32,trans:TransformComp)->bool{
+    unsafe{c_funcs::set_transform_comp(id, trans)}
+}
+pub  fn get_transform_comp<'a>(id:&'a u32)->Option<&'a mut TransformComp>{
+    unsafe{
+        let out= c_funcs::get_transform_comp(*id);
+        if out.is_null(){
+            None
+        } else{
+            out.as_mut() 
+        }
+    }
+}
+pub fn remove_transform_comp(id:u32)->bool{
+    unsafe{
+        c_funcs::remove_mesh_comp(id)
+    }
+}
+
+pub fn set_physics_comp(id:u32, phys:PhysicsComp)->bool{
+    unsafe {
+        c_funcs::set_physics_comp(id, phys)
+    }
+}
+pub fn get_physics_comp<'a>(id:&'a u32)->Option<&'a mut PhysicsComp>{
+    unsafe{
+        let out= c_funcs::get_physics_comp(*id);
+        if out.is_null(){
+            None
+        } else{
+            out.as_mut()
+        }
+    } 
+}
+pub fn remove_physics_comp(id:u32)->bool{
+    unsafe {
+        c_funcs::remove_physics_comp(id)
+    }
+}
+
+pub fn set_mesh_comp(id:u32,mesh:MeshComp)->bool{
+    unsafe {
+        c_funcs::set_mesh_comp(id, mesh)
+    }
+}
+pub fn get_mesh_comp<'a>(id:&'a u32)->Option<&'a mut MeshComp>{
+    unsafe{
+        let out= c_funcs::get_mesh_comp(*id);
+        if out.is_null(){
+            None
+        } else{
+            out.as_mut()
+        }
+    } 
+}
+pub fn remove_mesh_comp(id:u32)->bool{
+    unsafe {
+        c_funcs::remove_mesh_comp(id)
+    }
+}
+
+pub fn call_event<T:Entity, U:Fn(&mut T)+Clone>(id:u32, event:&U){
+    let bx = Box::new(event.clone());
+    let event =bx.as_ref() as *const dyn Fn(&mut T);
+    let func = (&event) as *const *const dyn Fn(&mut T); 
+    let env = unsafe{func.offset(8)};
+    todo!()
 }
