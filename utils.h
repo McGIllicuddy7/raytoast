@@ -451,6 +451,10 @@ typedef struct {\
 }Option##T;
 #define Some(v) {true,v}
 #define None {false}
+
+
+typedef struct Unit{
+}Unit;
 /*
 Implementation
 */

@@ -28,7 +28,7 @@ Runtime RT = {};
 static void runtime_reserve(){
     for(int i =0; i<100; i++){
         v_append(RT.entities, 0);
-        v_append(RT.mesh_comps,(OptionMeshComp) {});
+        v_append(RT.model_comps,(OptionModelComp) {});
         v_append(RT.transform_comps,(OptionTransformComp){});
         v_append(RT.physics_comps,(OptionPhysicsComp) {});
     }
@@ -47,11 +47,13 @@ static void process_events(){
 void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
     tmp_reset();
     RT.entities = (EntityRefVec)make(0, EntityRef);
-    RT.meshes = ResourceMesh_new(UnloadMesh);
+    RT.models = ResourceModel_new(UnloadModel);
     RT.shaders = ResourceShader_new(UnloadShader);
-    RT.mesh_comps =(OptionMeshCompVec)make(0, OptionMeshComp);
+    RT.model_comps =(OptionModelCompVec)make(0, OptionModelComp);
     RT.transform_comps =(OptionTransformCompVec)make(0, OptionTransformComp);
     RT.physics_comps =(OptionPhysicsCompVec)make(0, OptionPhysicsComp);
+    RT.loaded_models = Stringu32HashTable_create(1000, hash_string, string_equals);
+    RT.loaded_shaders = Stringu32HashTable_create(1000, hash_string, string_equals); 
     for(int i =0; i<500; i++){
         runtime_reserve();
     }
@@ -65,6 +67,7 @@ void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
     RT.camera.target = (Vector3){1.0, 0.0, 0.0};
     RT.camera.projection = CAMERA_PERSPECTIVE;
     setup();
+    RT.target = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
     while(!WindowShouldClose()){
         if (RT.failed_to_create){
             runtime_reserve();
@@ -77,7 +80,7 @@ void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
         }
         on_tick();
         run_physics();
-        BeginDrawing();
+        BeginTextureMode(RT.target);
         ClearBackground(BLACK);
         rlEnableBackfaceCulling();
         for (int i =0; i<RT.entities.length; i++){
@@ -87,19 +90,19 @@ void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
         }
         Material mat = LoadMaterialDefault();
         BeginMode3D(RT.camera);
-        for (int i =0; i<RT.mesh_comps.length; i++){
+        for (int i =0; i<RT.model_comps.length; i++){
             if(!RT.entities.items[i]){
                 continue;
             }
-            if (RT.mesh_comps.items[i].is_valid){
-                OptionShader shade = get_shader(RT.mesh_comps.items[i].value.shader_id);
+            if (RT.model_comps.items[i].is_valid){
+                OptionShader shade = get_shader(RT.model_comps.items[i].value.shader_id);
            
                 assert(shade.is_valid);
                 if(!shade.is_valid){
                     continue;
                 }
                 mat.shader = shade.value;
-                OptionMesh msh = get_mesh(RT.mesh_comps.items[i].value.mesh_id);
+                OptionModel msh = get_model(RT.model_comps.items[i].value.model_id);
                  if(!msh.is_valid){
                     continue;
                 } 
@@ -107,23 +110,24 @@ void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
                 if(!trans){
                     continue;
                 }
-                Matrix loc = MatrixTranslate(trans->transform.translation.x, 
-                trans->transform.translation.y, trans->transform.translation.z);
+                //Matrix loc = MatrixTranslate(trans->transform.translation.x, 
+               // trans->transform.translation.y, trans->transform.translation.z);
                 Matrix rot = QuaternionToMatrix(trans->transform.rotation);
                 Matrix scale = MatrixScale(trans->transform.scale.x, trans->transform.scale.y, trans->transform.scale.z);
-                Matrix transform = MatrixMultiply(rot,MatrixMultiply(scale, loc));
-                PhysicsComp * cmp = get_physics_comp(i);
-                if(cmp){
-                    BoundingBox bb = cmp->box;
-                    bb.max = Vector3Add(bb.max, trans->transform.translation);
-                    bb.min = Vector3Add(bb.min, trans->transform.translation); 
-                    DrawBoundingBox(bb, GREEN);
-                }
-                DrawMesh(msh.value, mat,transform);
+                Matrix transform = MatrixMultiply(rot,scale);
+                msh.value.transform = transform;
+                Material old = msh.value.materials[0];
+                msh.value.materials[0] = mat;
+                DrawModel(msh.value,trans->transform.translation, 1.0,WHITE);
+                msh.value.materials[0] = old;
             }
         }
         EndMode3D();
         on_render();
+        EndTextureMode();
+        BeginDrawing();
+        DrawTextureRec(RT.target.texture, (Rectangle){ 0, 0, (float)RT.target.texture.width, (float)-RT.target.texture.height }, (Vector2){ 0, 0 }, WHITE);
+        EndShaderMode();
         EndDrawing();
         finish_physics();
         process_events();
@@ -229,44 +233,44 @@ bool remove_physics_comp(u32 id){
     return true;
 }
 
-bool set_mesh_comp(u32 id, MeshComp mesh){
+bool set_model_comp(u32 id, ModelComp model){
     if(id>RT.entities.length){
         return false;
     }
     if(!RT.entities.items[id]){
         return false;
     }
-    RT.mesh_comps.items[id] = (OptionMeshComp)Some(mesh); 
+    RT.model_comps.items[id] = (OptionModelComp)Some(model); 
     return true;
 }
-MeshComp * get_mesh_comp(u32 id){
+ModelComp * get_model_comp(u32 id){
     if(id>RT.entities.length){
         return 0;
     }
     if(!RT.entities.items[id]){
         return 0;
     }
-    if(RT.mesh_comps.items[id].is_valid){
-       return &RT.mesh_comps.items[id].value;
+    if(RT.model_comps.items[id].is_valid){
+       return &RT.model_comps.items[id].value;
     }
     return 0;
 }
-bool remove_mesh_comp(u32 id){
+bool remove_model_comp(u32 id){
     if(id>RT.entities.length){
         return false;
     }
     if(!RT.entities.items[id]){
         return false;
     }
-    RT.mesh_comps.items[id] = (OptionMeshComp)None;
+    RT.model_comps.items[id] = (OptionModelComp)None;
     return true;
 }
 
 OptionShader get_shader(u32 id){
     return RT.shaders.values.items[id];
 }
-OptionMesh get_mesh(u32 id){
-    return RT.meshes.values.items[id];
+OptionModel get_model(u32 id){
+    return RT.models.values.items[id];
 }
 
 u32 create_shader(Shader shader){
@@ -277,11 +281,11 @@ bool remove_shader(u32 id){
     return true;
 }
 
-u32 create_mesh(Mesh mesh){
-    return ResourceMesh_create(&RT.meshes, mesh);
+u32 create_model(Model model){
+    return ResourceModel_create(&RT.models, model);
 }
-bool remove_mesh(u32 id){
-  ResourceMesh_destroy(&RT.meshes, id);
+bool remove_model(u32 id){
+  ResourceModel_destroy(&RT.models, id);
   return true;
 }
 Camera3D * get_camera(){
@@ -309,5 +313,70 @@ void call_event(u32 id, void (*func)(void * self, void * args), void * args){
             current = current->next;
         }
         current->next = node;
+    }
+}
+
+u32 load_shader(const char * vertex_path, const char *frag_path){
+    String name = new_string(0,vertex_path);
+    str_concat(name, "\0");
+    str_concat(name, frag_path);
+    if(Stringu32HashTable_contains(RT.loaded_shaders, name)){
+        u32 * out = Stringu32HashTable_find(RT.loaded_shaders, name);
+        unmake(name);
+        return *out;
+    }  else{
+        Shader shader = LoadShader(vertex_path, frag_path);
+        u32 out = create_shader(shader);
+        Stringu32HashTable_insert(RT.loaded_shaders, name, out);
+        return out;
+    }
+
+}
+void unload_shader(u32 id){
+    if(!RT.shaders.values.items[id].is_valid){
+        return;
+    }
+    UnloadShader(RT.shaders.values.items[id].value);
+    RT.shaders.values.items[id] = (OptionShader){};
+    for(int i =0; i<RT.loaded_shaders->TableSize; i++){
+        Stringu32KeyValuePairVec * v = &RT.loaded_shaders->Table[i];
+        for(int j =0; j<v->length; j++){
+            Stringu32KeyValuePair p = v->items[i];
+            if(p.value == id){
+                unmake(p.key);
+                v_remove((*v), j);
+            }
+        }
+    }
+}
+
+u32 load_model(const char * path){
+    String name = new_string(0,path);
+    if(Stringu32HashTable_contains(RT.loaded_shaders, name)){
+        u32 * out = Stringu32HashTable_find(RT.loaded_models, name);
+        unmake(name);
+        return *out;
+    }  else{
+        Model model = LoadModel(path);
+        u32 out = create_model(model);
+        Stringu32HashTable_insert(RT.loaded_models,name, out );
+        return out;
+    }
+}
+void unload_model(u32 id){
+     if(!RT.models.values.items[id].is_valid){
+        return;
+    }
+    UnloadModel(RT.models.values.items[id].value);
+    RT.models.values.items[id] = (OptionModel){};
+    for(int i =0; i<RT.loaded_models->TableSize; i++){
+        Stringu32KeyValuePairVec * v = &RT.loaded_models->Table[i];
+        for(int j =0; j<v->length; j++){
+            Stringu32KeyValuePair p = v->items[i];
+            if(p.value == id){
+                unmake(p.key);
+                v_remove((*v), j);
+            }
+        }
     }
 }

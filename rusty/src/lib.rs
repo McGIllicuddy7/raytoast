@@ -13,10 +13,10 @@ impl Entity for TestEntity{
         draw_text("lol",500, 500, 48, Color { r: 255, g: 255, b: 255, a: 255 });
     }
 }
-static TEST_ENTITY_VTABLE:EntityVTable = EntityVTable{on_tick:TestEntity::on_tick as OnTick,on_render:TestEntity::on_render as OnRender, on_setup:TestEntity::on_setup as OnSetup, destructor:no_op_drop as Destructor};
+setup_vtable!(TestEntity, TEST_ENTITY_VTABLE, no_op_drop, test_entity_setup);
 impl TestEntity{
     pub fn new()->Self{
-        let base_class = CEntity{vtable: & TEST_ENTITY_VTABLE as *const EntityVTable, self_id:0};
+        let base_class = CEntity{vtable:&TEST_ENTITY_VTABLE  as *const EntityVTable, self_id:0};
         return Self { base_class}
     }
 }
@@ -28,7 +28,7 @@ impl TestEntity{
 extern {
     static entity_default_vtable:EntityVTable;
 }
-fn test_event(ent:&mut TestEntity){
+fn test_event(_ent:&mut TestEntity){
     println!("hello world!");
 }
 #[no_mangle]

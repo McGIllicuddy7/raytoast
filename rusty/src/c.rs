@@ -23,6 +23,16 @@ pub struct EntityVTable {
     pub on_setup:*const extern fn(*const c_void, u32),
     pub destructor:*const extern fn(*const c_void),
 }
+#[allow(unused)]
+macro_rules! setup_vtable {
+    ($T:ident, $name:ident, $destructor:ident, $setup_fn_name:ident) => {
+        static $name:EntityVTable = EntityVTable{on_tick:$T::on_tick as OnTick,on_render:$T::on_render as OnRender, on_setup:$T::on_setup as OnSetup, destructor:$destructor as Destructor};
+        pub const fn $setup_fn_name()->CEntity{
+            CEntity{vtable:&$name  as *const EntityVTable, self_id:0}
+        }
+    };
+}
+pub(crate) use setup_vtable;
 unsafe impl Send for EntityVTable{}
 unsafe impl Sync for EntityVTable{}
 pub type OnTick = *const extern fn(*const c_void,f32);
@@ -30,7 +40,7 @@ pub type OnRender = *const extern fn(*const c_void);
 pub type OnSetup = *const extern fn(*const c_void, u32);
 pub type Destructor = *const extern fn (*const c_void);
 #[allow(unused)]
-pub trait Entity{
+pub trait Entity: {
     fn on_tick(&mut self, dt:f32){
 
     }
@@ -79,6 +89,35 @@ pub struct Color{
     pub g:u8, 
     pub b:u8,
     pub a:u8
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct Shader{
+    pub id:u32, 
+    pub locs:*mut i32,
+}
+unsafe impl Send for Shader{}
+unsafe impl Sync for Shader{} 
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct Mesh{
+    pub vertex_count:i32, 
+    pub triangle_count:i32, 
+    pub vertices:*mut f32, 
+    pub texcoords:*mut f32,
+    pub texcoords2:*mut f32, 
+    pub normals:*mut f32, 
+    pub tangents:*mut f32,
+    pub colors:*mut u8, 
+    pub indices:*mut u16, 
+    pub anim_vertices:*mut f32, 
+    pub anim_normals:*mut f32, 
+    pub bone_ids:*mut u8, 
+    pub bone_weights:*mut f32, 
+    pub vao_id:u32, 
+    pub vbo_id:*mut u32, 
 }
 
 #[repr(C)]

@@ -48,11 +48,11 @@ void setup(){
     srand(time(0));
     SetRandomSeed(time(0));
     float rad = 1.0;
-    u32 cube_id = create_mesh(GenMeshCube(0.2, 0.2, 0.2));
-    u32 mesh_id = create_mesh(GenMeshSphere(0.1, 16, 16));
-    assert(cube_id != mesh_id);
-    MeshComp msh = {};
-    msh.mesh_id = mesh_id;
+    u32 cube_id = create_model(LoadModelFromMesh(GenMeshCube(0.2, 0.2, 0.2)));
+    u32 model_id = create_model(LoadModelFromMesh(GenMeshSphere(0.1, 16, 16)));
+    assert(cube_id != model_id);
+    ModelComp msh = {};
+    msh.model_id = model_id;
     green= create_shader(LoadShader("shader/sbase.vs", "shaders/white.fs"));
     red = create_shader(LoadShader("shaders/base.vs", "shaders/red.fs"));
     msh.shader_id = white;
@@ -75,7 +75,7 @@ void setup(){
         }
         transform.translation = vec_from_sphere(radius, phi, theta);
         msh.shader_id = i %movable_amnt == 0?  white: red;
-        msh.mesh_id = i%movable_amnt == 0 ? mesh_id : cube_id;
+        msh.model_id = i%movable_amnt == 0 ? model_id : cube_id;
         transform.scale = (Vector3){scale, scale, scale};
         transform.rotation = (Quaternion){0.0, 0.0, 0.0, 1.0};
         TransformComp trans ={};
@@ -91,7 +91,7 @@ void setup(){
         phys.mass = scale;
         phys.movable = i%movable_amnt==0 ;
         set_transform_comp(id, trans);
-        set_mesh_comp(id, msh);
+        set_model_comp(id, msh);
         set_physics_comp(id, phys);
         get_camera()->position = (Vector3){-8.0, 0,0};
     }
@@ -111,6 +111,6 @@ void on_render(){
 }
 
 int main(void){
-    temporary_allocator = *arena_create();
+    tmp_init();
     init_runtime(setup, on_tick, on_render);
 } 

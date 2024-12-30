@@ -9,10 +9,10 @@ enable_vec_type(OptionTransformComp);
 
 typedef struct{
     u32 shader_id;
-    u32 mesh_id;
-}MeshComp;
-enable_option_type(MeshComp);
-enable_vec_type(OptionMeshComp);
+    u32 model_id;
+}ModelComp;
+enable_option_type(ModelComp);
+enable_vec_type(OptionModelComp);
 
 typedef struct{
     BoundingBox box;
