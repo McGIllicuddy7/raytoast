@@ -47,8 +47,8 @@ static void process_events(){
 void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
     tmp_reset();
     RT.entities = (EntityRefVec)make(0, EntityRef);
-    RT.models = ResourceModel_new(UnloadModel);
-    RT.shaders = ResourceShader_new(UnloadShader);
+    RT.models = ResourceModel_make(UnloadModel);
+    RT.shaders = ResourceShader_make(UnloadShader);
     RT.model_comps =(OptionModelCompVec)make(0, OptionModelComp);
     RT.transform_comps =(OptionTransformCompVec)make(0, OptionTransformComp);
     RT.physics_comps =(OptionPhysicsCompVec)make(0, OptionPhysicsComp);
@@ -57,7 +57,7 @@ void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
     for(int i =0; i<500; i++){
         runtime_reserve();
     }
-    SetTraceLogLevel(LOG_ERROR);
+    SetTraceLogLevel(LOG_ALL);
     InitWindow(1600, 1024,"raytoast");
     SetTargetFPS(61);
     DisableCursor();
@@ -66,8 +66,8 @@ void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
     RT.camera.up = (Vector3){0.0,0.0, 1.0};
     RT.camera.target = (Vector3){1.0, 0.0, 0.0};
     RT.camera.projection = CAMERA_PERSPECTIVE;
-    setup();
     RT.target = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
+    setup();
     while(!WindowShouldClose()){
         if (RT.failed_to_create){
             runtime_reserve();
@@ -133,9 +133,30 @@ void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
         process_events();
         tmp_reset();
     }
+    unload_level();
     CloseWindow();
 }
-
+static void free_string(String *s){
+    arena_free(s->arena, s->items);
+}
+void unload_level(){
+    for(int i =0; i<RT.entities.length; i++){
+        if(RT.entities.items[i]){
+            RT.entities.items[i]->vtable->destructor(RT.entities.items[i]);
+        }
+    }
+    unmake(RT.entities);
+    ResourceModel_unmake(&RT.models);
+    ResourceShader_unmake(&RT.shaders);
+    unmake(RT.transform_comps);
+    unmake(RT.physics_comps);
+    unmake(RT.model_comps);
+    Stringu32HashTable_unmake_funcs(RT.loaded_models, free_string, 0);
+    Stringu32HashTable_unmake_funcs(RT.loaded_shaders, free_string, 0);
+    UnloadRenderTexture(RT.target);
+    EventNode* queue = RT.event_queue;
+    tmp_reset();
+}
 Optionu32 create_entity(Entity * ent){
     for (int i=0; i<RT.entities.length; i++){
         if(!RT.entities.items[i]){

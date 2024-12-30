@@ -7,7 +7,7 @@
 #include <pthread.h>
 #define true 1 
 #define false 0
-enable_option_type(u32);
+
 
 typedef struct {
     void (*on_tick)(void * self, f32 delta_time);
@@ -98,3 +98,4 @@ void unload_shader(u32 id);
 
 u32 load_model(const char * path);
 void unload_model(u32 id);
+void unload_level();

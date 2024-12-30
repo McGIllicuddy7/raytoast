@@ -49,8 +49,7 @@ void setup(){
     SetRandomSeed(time(0));
     float rad = 1.0;
     u32 cube_id = create_model(LoadModelFromMesh(GenMeshCube(0.2, 0.2, 0.2)));
-    u32 model_id = create_model(LoadModelFromMesh(GenMeshSphere(0.1, 16, 16)));
-    assert(cube_id != model_id);
+    u32 model_id = load_model("sphere.obj");
     ModelComp msh = {};
     msh.model_id = model_id;
     green= create_shader(LoadShader("shader/sbase.vs", "shaders/white.fs"));
@@ -114,3 +113,4 @@ int main(void){
     tmp_init();
     init_runtime(setup, on_tick, on_render);
 } 
+

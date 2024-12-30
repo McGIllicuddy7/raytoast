@@ -142,7 +142,16 @@ pub struct Optu32{
     pub valid:bool, 
     pub value:u32,
 }
-
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct CVec<T>{
+    pub items :*mut T, 
+    pub length:usize, 
+    pub capacity:usize, 
+    pub arena:*mut c_funcs::Arena, 
+}
+unsafe impl <T> Send for CVec<T>{}
+unsafe impl <T> Sync for CVec<T>{}
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct Transform{
@@ -153,7 +162,9 @@ pub struct Transform{
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct TransformComp{
-    pub transform:Transform
+    pub transform:Transform, 
+    pub parent:Optu32, 
+    pub children:CVec<u32>,
 }
 
 #[repr(C)]

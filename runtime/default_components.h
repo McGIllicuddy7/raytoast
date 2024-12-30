@@ -1,8 +1,11 @@
 #pragma once
 #include <raylib.h>
-
+#include "../utils.h"
+enable_option_type(u32);
 typedef struct{
     Transform transform;
+    Optionu32 parent;
+    u32Vec children;
 }TransformComp;
 enable_option_type(TransformComp);
 enable_vec_type(OptionTransformComp);

@@ -119,6 +119,19 @@ void * memdup(Arena * arena,void * ptr, size_t size);
 
 #define enable_vec_type(T) typedef struct {T * items; size_t length; size_t capacity; Arena * arena;} T##Vec
 
+enable_vec_type(Byte);
+enable_vec_type(i8);
+enable_vec_type(i16);
+enable_vec_type(i32);
+enable_vec_type(i64);
+enable_vec_type(i128);
+enable_vec_type(u8);
+enable_vec_type(u16);
+enable_vec_type(u32);
+enable_vec_type(u64);
+enable_vec_type(u128);
+enable_vec_type(f32);
+enable_vec_type(f64);
 
 
 #define make(arena, T) {0,0,0, arena}
@@ -167,6 +180,8 @@ while (vec.capacity<vec.length){if(vec.capacity != 0){vec.capacity *= 2;} else{v
 vec.items = (typeof(vec.items))arena_realloc(vec.arena,vec.items, previous_cap,vec.capacity*sizeof(vec.items[0]));}
 
 #define len(vec) (vec).length
+
+#define unmake_fn(vec, fn) for(int i =0; i<vec.length; i++){fn(vec.items[i]);} unmake(vec)
 ;
 /*
 String stuff
@@ -385,6 +400,17 @@ static void T##U##HashTable_remove(T##U##HashTable * table, T key){\
 }\
 static void T##U##HashTable_unmake(T##U##HashTable * table){\
 	for(int i =0; i<table->TableSize; i++){\
+		unmake(table->Table[i]);\
+	}\
+	global_free(table->Table);\
+	global_free(table);\
+}\
+static void T##U##HashTable_unmake_funcs(T##U##HashTable * table,void (*not_key)(T * key), void (*not_value)(U * value)){\
+	for(int i =0; i<table->TableSize; i++){\
+		for(int j =0; j<table->Table[i].length; j++){\
+			if(not_key){not_key(&table->Table[i].items[j].key);}\
+			if(not_value){not_value(&table->Table[i].items[j].value);}\
+		}\
 		unmake(table->Table[i]);\
 	}\
 	global_free(table->Table);\

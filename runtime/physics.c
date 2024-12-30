@@ -27,7 +27,6 @@ size_t hash_int3(Int3 i){
 bool Int3_equals(Int3 a, Int3 b){
    return a.x == b.x && a.y == b.y && a.z == b.z;
 }
-enable_vec_type(u32);
 enable_hash_type(Int3, u32Vec);
 static Int3u32VecHashTable *table = 0;
 const float tile_size= 0.5;
