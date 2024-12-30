@@ -33,6 +33,7 @@ const float tile_size= 0.5;
 static OptionPhysicsCompVec phys ={};
 static OptionTransformCompVec trans = {};
 static pthread_t phys_thread = {0};
+static volatile bool physics_done = false;
 #define min(a,b) a<b ? a : b
 #define max(a,b) a<b ? b : a
 
@@ -173,19 +174,14 @@ static VectorTuple calc_hit_impulses(u32 id1, u32 id2, Vector3 normal_vector,flo
     const Vector3 vb = Vector3Scale(normal_vector, delb);
     return (VectorTuple){Vector3Add(base_a1, va),Vector3Add(base_b1, vb)};
 }
-static void collision_iter(PhysicsComp * comp, Transform * transform, u32 id, float dt){
-    if(!comp->movable){
-        return;
-    }
-    if(Vector3Equals(comp->velocity, (Vector3){0.0, 0.0, 0.0})){
-        return;
-    }
+static bool attempt_to_move(PhysicsComp * comp, Transform * Transform, u32 id,float dt, float *distance_moved, u32 * hit_id){
     float max_travelled_dist = Vector3Length(Vector3Scale(comp->velocity, dt));
     float distance_travelled = 0.0;
     Vector3 norm = Vector3Normalize(comp->velocity);
     float min = min_dimension(comp->box);
     Vector3 v = Vector3Scale(trans.items[id].value.transform.translation, 1/tile_size);
     Int3 key = {v.x, v.y, v.z}; 
+    bool was_hit = false;
     while(distance_travelled<max_travelled_dist){
         Vector3 col_norm;
         u32 collision_id;
@@ -219,6 +215,8 @@ static void collision_iter(PhysicsComp * comp, Transform * transform, u32 id, fl
                     other_old = other;
                     old_norm = norm;
                 }
+                was_hit = true;
+                /*
                 if(get_physics_comp(other_old)->movable){
                     VectorTuple tup = calc_hit_impulses(id, other_old, old_norm, 1.0);
                     comp->velocity = tup.v1;
@@ -226,6 +224,8 @@ static void collision_iter(PhysicsComp * comp, Transform * transform, u32 id, fl
                 } else{
                     comp->velocity = Vector3Reflect(comp->velocity, old_norm);
                 }
+                */
+
                 break;
             }
         }
@@ -253,6 +253,26 @@ static void collision_iter(PhysicsComp * comp, Transform * transform, u32 id, fl
             Int3u32VecHashTable_insert(table, key0, vec);
         }
     }
+    *distance_moved= distance_travelled;
+    return was_hit;
+}
+static void collision_iter(PhysicsComp * comp, Transform * transform, u32 id, float dt){
+    if(!comp->movable){
+        return;
+    }
+    if(get_transform_comp(id)->parent.is_valid){
+        return;
+    }
+    if(Vector3Equals(comp->velocity, (Vector3){0.0, 0.0, 0.0})){
+        return;
+    }
+    float  distance_moved;
+    u32 hit_id;
+    bool any_children_hit = false;
+    for(int i =0; i<get_transform_comp(id)->children.length; i++){
+        bool hit_something = attempt_to_move(comp, transform, id, dt, &distance_moved, &hit_id);
+    }
+
 }
 static void run_single(float dt){
     for(int i =0; i<phys.length; i++){
@@ -282,6 +302,7 @@ static void *tick(void*){
     run_single(GetFrameTime());
     Int3u32VecHashTable_unmake(table);
     table = 0;
+    physics_done = true;
     return 0;
 }
 void run_physics(){
@@ -291,10 +312,14 @@ void run_physics(){
         phys.items[i].value.collided_this_frame = false;
         assert(Vector3Equals(trans.items[i].value.transform.translation, RT.transform_comps.items[i].value.transform.translation));
     }
+    physics_done = false;
     pthread_create(&phys_thread, 0, tick, 0);
 
 }
 void finish_physics(){
+    while(!physics_done){
+
+    }
     pthread_join(phys_thread,0);
     OptionPhysicsCompVec oldphys = RT.physics_comps;
     OptionTransformCompVec oldtrans = RT.transform_comps;

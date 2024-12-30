@@ -68,6 +68,7 @@ void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
     RT.camera.projection = CAMERA_PERSPECTIVE;
     RT.target = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
     setup();
+
     while(!WindowShouldClose()){
         if (RT.failed_to_create){
             runtime_reserve();
