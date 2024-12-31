@@ -212,12 +212,16 @@ static void collision_iter(PhysicsComp * comp, Transform * transform, u32 id, fl
             bool hit = check_hit(id, &norm, &other);
             if(hit){
                 trans.items[id].value.transform.translation = old_location;
-                int other_old = other;
+                u32 other_old = other;
                 Vector3 old_norm = norm;
                 if(check_hit(id, &norm, &other)){
                     trans.items[id].value.transform.translation = Vector3Add(trans.items[id].value.transform.translation, Vector3Scale(norm, 0.01));
                     other_old = other;
                     old_norm = norm;
+                }
+                if(!get_physics_comp(other_old)){
+                    comp->velocity = Vector3Reflect(comp->velocity, old_norm);
+                    break;
                 }
                 if(get_physics_comp(other_old)->movable){
                     VectorTuple tup = calc_hit_impulses(id, other_old, old_norm, 1.0);
