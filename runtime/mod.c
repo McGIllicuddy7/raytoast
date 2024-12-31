@@ -402,3 +402,46 @@ void unload_model(u32 id){
         }
     }
 }
+
+u32 get_root(u32 base){
+    TransformComp * trans = get_transform_comp(base);
+    if(trans){
+        if(trans->parent.is_valid){
+            return get_root(trans->parent.value);
+        }
+    }
+    return base;
+}
+void attach_to(u32 entity, u32 parent){
+    
+}
+void detach(u32 entity){
+
+}
+
+bool transform_set_contains_child(u32 root, u32 needle){
+    if(root == needle){
+        return true;
+    }
+    for(int i= 0; i<get_transform_comp(root)->children.length; i++){
+        bool hit = transform_set_contains_child(get_transform_comp(root)->children.items[i],needle);
+        if(hit){
+            return true;
+        }
+    }
+    return false;
+}
+
+float transform_set_mass(u32 root){
+    float out = 0.0;
+    if(get_physics_comp(root)){
+        out += get_physics_comp(root)->mass;
+    }
+    TransformComp * trans = get_transform_comp(root);
+    if(trans){
+        for(int i =0; i<trans->children.length; i++){
+            out += transform_set_mass(trans->children.items[i]);
+        }
+    }
+    return out;
+}

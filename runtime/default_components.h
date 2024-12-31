@@ -27,3 +27,8 @@ typedef struct{
 }PhysicsComp;
 enable_option_type(PhysicsComp);
 enable_vec_type(OptionPhysicsComp);
+
+bool transform_set_contains_child(u32 root, u32 needle);
+u32 get_root(u32 base);
+void attach_to(u32 entity, u32 parent);
+void detach(u32 entity);

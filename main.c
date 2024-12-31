@@ -55,8 +55,8 @@ void setup(){
     green= create_shader(LoadShader("shader/sbase.vs", "shaders/white.fs"));
     red = create_shader(LoadShader("shaders/base.vs", "shaders/red.fs"));
     msh.shader_id = white;
-    int max = 1000;
-    int movable_amnt = 2;
+    int max = 2;
+    int movable_amnt = 1;
     for(int i =0; i<max; i++){
         TestEntity * entity = malloc(sizeof(TestEntity));
         memcpy(entity->bytes, "012345678910", 13);
@@ -64,38 +64,34 @@ void setup(){
         u32 id = create_entity((void*)entity).value;
         entity->entity.self_id = id;
         Transform transform;
-        //transform.translation = (Vector3){4*cos((f32)i/max *2.0*PI), 4 *sin((f32)i/max *2.0*PI), 0};
+        transform.translation = (Vector3){4*cos((f32)i/max *2.0*PI), 4 *sin((f32)i/max *2.0*PI), 0};
         float theta = random_float()*2*PI;
         float phi = random_float()*2*PI;
         float radius = sqrt(random_float())*10.0;
-        float scale = random_float();
-        if(scale<0.5){
-            scale = 0.5;
-        }
-        transform.translation = vec_from_sphere(radius, phi, theta);
-        msh.shader_id = i %movable_amnt == 0?  white: red;
-        msh.model_id = i%movable_amnt == 0 ? model_id : cube_id;
+        float scale = 1.0;
+        //transform.translation = vec_from_sphere(radius, phi, theta);
+        msh.shader_id = i %2 == 0?  white: red;
+        msh.model_id = cube_id;
         transform.scale = (Vector3){scale, scale, scale};
         transform.rotation = (Quaternion){0.0, 0.0, 0.0, 1.0};
         TransformComp trans ={};
         trans.transform = transform;
+        trans.parent.is_valid = false;
         PhysicsComp phys = {};
         phys.movable = 1;
         phys.box.max = (Vector3){0.1, 0.1, 0.1};
         phys.box.min = (Vector3){-0.1, -0.1, -0.1};
         phys.box.max = Vector3Scale(phys.box.max, scale);
         phys.box.min = Vector3Scale(phys.box.min, scale);
-        phys.velocity = (Vector3){sin(theta), -cos(theta), 0};
-        phys.velocity = gen_random_vector(2.0);
+        phys.velocity = Vector3Negate(transform.translation);
         phys.mass = scale;
-        phys.movable = i%movable_amnt==0 ;
         set_transform_comp(id, trans);
         set_model_comp(id, msh);
         set_physics_comp(id, phys);
         get_camera()->position = (Vector3){-8.0, 0,0};
     }
-    Entity * ent = create_test_rust_entity();
-    create_entity(ent);
+    //Entity * ent = create_test_rust_entity();
+    //create_entity(ent);
 }
 void on_tick(){
     static u128 frame_count = 0;
