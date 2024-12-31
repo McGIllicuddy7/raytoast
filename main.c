@@ -55,7 +55,7 @@ void setup(){
     green= create_shader(LoadShader("shader/sbase.vs", "shaders/white.fs"));
     red = create_shader(LoadShader("shaders/base.vs", "shaders/red.fs"));
     msh.shader_id = white;
-    int max = 2;
+    int max = 1000;
     int movable_amnt = 1;
     for(int i =0; i<max; i++){
         TestEntity * entity = malloc(sizeof(TestEntity));
@@ -65,11 +65,12 @@ void setup(){
         entity->entity.self_id = id;
         Transform transform;
         transform.translation = (Vector3){4*cos((f32)i/max *2.0*PI), 4 *sin((f32)i/max *2.0*PI), 0};
+        transform.translation = Vector3Scale(transform.translation, 32.0);
         float theta = random_float()*2*PI;
         float phi = random_float()*2*PI;
         float radius = sqrt(random_float())*10.0;
         float scale = 1.0;
-        //transform.translation = vec_from_sphere(radius, phi, theta);
+        transform.translation = vec_from_sphere(radius, phi, theta);
         msh.shader_id = i %2 == 0?  white: red;
         msh.model_id = cube_id;
         transform.scale = (Vector3){scale, scale, scale};

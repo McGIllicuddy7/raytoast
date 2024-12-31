@@ -88,69 +88,46 @@ static float min_dimension(BoundingBox bx){
 
 static float max_allowed_distance(u32 id){
     float min = tile_size;
-    Vector3 t = Vector3Scale(trans.items[id].value.transform.translation, 1/tile_size);
-    Int3 xyz = {t.x, t.y, t.z};
-    int count = 2;
-    for(int dx = -count; dx<=count; dx++){
-        for(int dy = -count; dy<=count; dy++){
-            for(int dz = -count; dz<=count;dz++ ){
-                Int3 v = {xyz.x+dx, xyz.y+dy, xyz.z+dz};
-                u32Vec * vec = Int3u32VecHashTable_find(table, v);
-                if(vec){
-                    for(int i =0; i<vec->length; i++){
-                        u32 id1 = vec->items[i];
-                        if(id1 == id){
-                            continue;
-                        }
-                        BoundingBox b1 = phys.items[id].value.box;
-                        BoundingBox b2 = phys.items[id1].value.box;
-                        b1.max = Vector3Add(b1.max, trans.items[id].value.transform.translation);
-                        b2.max = Vector3Add(b2.max, trans.items[id1].value.transform.translation);
-                        b1.min = Vector3Add(b1.min, trans.items[id].value.transform.translation);
-                        b2.min = Vector3Add(b2.min, trans.items[id1].value.transform.translation);
-                        float dist = bb_distance(b1, b2);
-                        if(dist<min){
-                            min = dist;
-                        }
-                    }
-                }
-            }
+    for(int id1 = 0; id1<RT.physics_comps.length; id1++){
+         if(!phys.items[id1].is_valid){
+            continue;
+        }
+        if(id1 == id){
+            continue;
+        }
+        BoundingBox b1 = phys.items[id].value.box;
+        BoundingBox b2 = phys.items[id1].value.box;
+        b1.max = Vector3Add(b1.max, trans.items[id].value.transform.translation);
+        b2.max = Vector3Add(b2.max, trans.items[id1].value.transform.translation);
+        b1.min = Vector3Add(b1.min, trans.items[id].value.transform.translation);
+        b2.min = Vector3Add(b2.min, trans.items[id1].value.transform.translation);
+        float dist = bb_distance(b1, b2);
+        if(dist<min){
+            min = dist;
         }
     }
     return min;
 }
 static bool check_hit(u32 id, Vector3 * normal,u32 * other_hit){
-    Vector3 t = Vector3Scale(trans.items[id].value.transform.translation, 1/tile_size);
-    Int3 xyz = {t.x, t.y, t.z};
-    int count = 2;
-    for(int dx = -count; dx<=count; dx++){
-        for(int dy = -count; dy<=count; dy++){
-            for(int dz = -count; dz<=count;dz++ ){
-                Int3 v = {xyz.x+dx, xyz.y+dy, xyz.z+dz};
-                u32Vec * vec = Int3u32VecHashTable_find(table, v);
-                if(vec){
-                    for(int i =0; i<vec->length; i++){
-                        u32 id1 = vec->items[i];
-                        if(id1 == id){
-                            continue;
-                        }
-                        BoundingBox b1 = phys.items[id].value.box;
-                        BoundingBox b2 = phys.items[id1].value.box;
-                        b1.max = Vector3Add(b1.max, trans.items[id].value.transform.translation);
-                        b2.max = Vector3Add(b2.max, trans.items[id1].value.transform.translation);
-                        b1.min = Vector3Add(b1.min, trans.items[id].value.transform.translation);
-                        b2.min = Vector3Add(b2.min, trans.items[id1].value.transform.translation);
-                        bool hit = CheckCollisionBoxes(b1, b2);
-                        if(hit){
-                            const Vector3 norm = box_collision_normal_vector(b1, b2);
-                            *normal=  norm;
-                            *other_hit = i;
-                            return true;
-                        }
-                
-                    }
-                }
-            }
+    for(int id1 = 0; id1<RT.physics_comps.length; id1++){
+        if(!phys.items[id1].is_valid){
+            continue;
+        }
+        if(id1 == id){
+            continue;
+        }
+        BoundingBox b1 = phys.items[id].value.box;
+        BoundingBox b2 = phys.items[id1].value.box;
+        b1.max = Vector3Add(b1.max, trans.items[id].value.transform.translation);
+        b2.max = Vector3Add(b2.max, trans.items[id1].value.transform.translation);
+        b1.min = Vector3Add(b1.min, trans.items[id].value.transform.translation);
+        b2.min = Vector3Add(b2.min, trans.items[id1].value.transform.translation);
+        bool hit = CheckCollisionBoxes(b1, b2);
+        if(hit){
+            const Vector3 norm = box_collision_normal_vector(b1, b2);
+                *normal=  norm;
+                *other_hit = id1;
+                return true;
         }
     }
     return false;
@@ -270,21 +247,8 @@ static void run_single(float dt){
 }
 static void *tick(void*){
     table = Int3u32VecHashTable_create(1000, hash_int3, Int3_equals);
-    for(int i =0; i<phys.length; i++){
-        Vector3 v = Vector3Scale(trans.items[i].value.transform.translation, 1/tile_size);
-        Int3 key = {v.x, v.y, v.z};
-        if(!Int3u32VecHashTable_contains(table, key)){
-            u32Vec v = make(0, u32);
-            v_append(v, i);
-            Int3u32VecHashTable_insert(table, key, v);
-        } else{
-           u32Vec * v = Int3u32VecHashTable_find(table, key);
-           v_append((*v), i);
-        }
-    }
     //run_single(GetFrameTime());
     run_single(GetFrameTime());
-    Int3u32VecHashTable_unmake(table);
     table = 0;
     return 0;
 }
