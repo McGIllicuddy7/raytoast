@@ -27,7 +27,7 @@ pub struct EntityVTable {
 macro_rules! setup_vtable {
     ($T:ident, $name:ident, $destructor:ident, $setup_fn_name:ident) => {
         static $name:EntityVTable = EntityVTable{on_tick:$T::on_tick as OnTick,on_render:$T::on_render as OnRender, on_setup:$T::on_setup as OnSetup, destructor:$destructor as Destructor};
-        pub const fn $setup_fn_name()->CEntity{
+        pub fn $setup_fn_name()->CEntity{
             CEntity{vtable:&$name  as *const EntityVTable, self_id:0}
         }
     };
