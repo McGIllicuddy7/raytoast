@@ -21,7 +21,6 @@ typedef struct{
     BoundingBox box;
     Vector3 velocity;
     float mass;
-    bool collided_this_frame;
     bool movable;
     bool can_bounce;
 }PhysicsComp;

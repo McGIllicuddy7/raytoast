@@ -11,6 +11,7 @@ typedef struct {
     int y;
     int z;
 }Int3;
+enable_vec_type(Int3);
 typedef struct{
     u32 base;
     u32 end;
@@ -27,9 +28,13 @@ size_t hash_int3(Int3 i){
 bool Int3_equals(Int3 a, Int3 b){
    return a.x == b.x && a.y == b.y && a.z == b.z;
 }
-enable_hash_type(Int3, u32Vec);
-static Int3u32VecHashTable *table = 0;
-const float tile_size= 0.5;
+#define TABLE_SIZE 128
+static u32Vec TABLE[TABLE_SIZE][TABLE_SIZE][TABLE_SIZE] = {};
+static Arena * phys_arena = 0;
+float tile_size= 1.0;
+float table_min = 0.0;
+float table_max = 0.0;
+static volatile bool phys_done = false;
 static OptionPhysicsCompVec phys ={};
 static OptionTransformCompVec trans = {};
 static pthread_t phys_thread = {0};
@@ -61,6 +66,31 @@ static float bb_distance(BoundingBox a, BoundingBox b){
     }
     return distance;
 }
+static int u32Vec_find(u32Vec vec, u32 needle){
+    for(int i=0; i<vec.length; i++){
+        if(vec.items[i] == needle){
+            return i;
+        }
+    }
+    return -1;
+}
+static int u32Vec_find_cap(u32Vec vec, u32 needle){
+    for(int i=0; i<vec.capacity; i++){
+        if(vec.items[i] == needle){
+            return i;
+        }
+    }
+    return -1;
+}
+static void u32Vec_print(u32Vec vec){
+    for(int i =0; i<vec.length; i++){
+        if(i != vec.length-1){
+            printf("%u, ", vec.items[i]);
+        } else{
+            printf("%u\n", vec.items[i]);
+        }
+    }
+}
 static Vector3 box_collision_normal_vector(BoundingBox a, BoundingBox b){
     Vector3 norms[] = {{1,0,0}, {-1, 0,0}, {0,1,0}, {0,-1,0}, {0,0,1}, {0,0,-1}};
     Vector3 av = Vector3Scale(Vector3Add(a.max, a.min), 0.5);
@@ -82,21 +112,53 @@ static Vector3 box_collision_normal_vector(BoundingBox a, BoundingBox b){
     }
     return norms[idx];
 }
+static Int3 location_to_int3(Vector3 loc){
+    float dx = loc.x-table_min;
+    float dy = loc.y-table_min;
+    float dz = loc.z-table_min;
+    int x = dx/tile_size;
+    int y = dy/tile_size;
+    int z = dz/tile_size;
+    if(x<0){
+        x =0;
+    }
+    if(y<0){
+        y = 0;
+    }
+    if(z<0){
+        z =0;
+    }
+    if(x>=TABLE_SIZE){
+        x=TABLE_SIZE-1;
+    }
+    if(y>=TABLE_SIZE){
+        y =TABLE_SIZE-1;
+    }
+    if(z>=TABLE_SIZE){
+        z =TABLE_SIZE-1;
+    }
+    return (Int3){x,y,z};
+}
 static float min_dimension(BoundingBox bx){
     return min((bx.max.x-bx.min.x),min((bx.max.y-bx.min.y), (bx.max.z-bx.min.z)));
 }
-
-static float max_allowed_distance(u32 id){
+static float max_allowed_distance_array(u32 id, u32Vec cmps){
     float min = tile_size;
-    for(int id1 = 0; id1<RT.physics_comps.length; id1++){
-         if(!phys.items[id1].is_valid){
+    for(int i = 0; i<cmps.length; i++){
+        u32 id1 = cmps.items[i];
+        if(!trans.items[id1].is_valid){
             continue;
         }
         if(id1 == id){
             continue;
         }
+        Vector3 t1 = trans.items[id].value.transform.translation;
+        Vector3 t2 = trans.items[id1].value.transform.translation;
         BoundingBox b1 = phys.items[id].value.box;
         BoundingBox b2 = phys.items[id1].value.box;
+        if(Vector3Distance(t1, t2)>min*2.0){
+            continue;
+        }
         b1.max = Vector3Add(b1.max, trans.items[id].value.transform.translation);
         b2.max = Vector3Add(b2.max, trans.items[id1].value.transform.translation);
         b1.min = Vector3Add(b1.min, trans.items[id].value.transform.translation);
@@ -108,16 +170,46 @@ static float max_allowed_distance(u32 id){
     }
     return min;
 }
-static bool check_hit(u32 id, Vector3 * normal,u32 * other_hit){
-    for(int id1 = 0; id1<RT.physics_comps.length; id1++){
-        if(!phys.items[id1].is_valid){
-            continue;
+static float max_allowed_distance(u32 id){
+    float min = tile_size;
+    int count =2;
+    Int3 lc = location_to_int3(trans.items[id].value.transform.translation);
+    for(int dz = -count; dz<= count; dz++){
+        for(int dy = -count; dy<=count; dy++){
+            for(int dx = -count; dx<=count; dx++){
+                if(lc.x+dx <0 || lc.x+dx>=TABLE_SIZE || lc.y+dy<0 || lc.y+dy>=TABLE_SIZE || lc.z+dz<0 || lc.z+dz>=TABLE_SIZE){
+                    continue;
+                }
+                
+                u32Vec cmps = TABLE[lc.z+dz][lc.y+dy][lc.x+dx];
+                float fmin = max_allowed_distance_array(id, cmps);
+                if(fmin<min){
+                    min = fmin;
+                }
+            }
         }
+    }
+    return min;
+}
+static bool check_hit_array(u32 id, u32Vec cmps,Vector3 * normal,u32 * other_hit){
+    int count =2;
+    for(int i = 0; i<cmps.length; i++){
+        u32 id1 = cmps.items[i];
         if(id1 == id){
             continue;
         }
+        if(!trans.items[id1].is_valid){
+            continue;
+        }
+        Vector3 t1 = trans.items[id].value.transform.translation;
+        Vector3 t2 = trans.items[id1].value.transform.translation;
         BoundingBox b1 = phys.items[id].value.box;
         BoundingBox b2 = phys.items[id1].value.box;
+        if(Vector3Distance(t1, t2)>(Vector3Distance(b1.max, b1.min)+Vector3Distance(b2.max, b2.min))*2.0){
+            continue;
+        }
+
+
         b1.max = Vector3Add(b1.max, trans.items[id].value.transform.translation);
         b2.max = Vector3Add(b2.max, trans.items[id1].value.transform.translation);
         b1.min = Vector3Add(b1.min, trans.items[id].value.transform.translation);
@@ -125,12 +217,68 @@ static bool check_hit(u32 id, Vector3 * normal,u32 * other_hit){
         bool hit = CheckCollisionBoxes(b1, b2);
         if(hit){
             const Vector3 norm = box_collision_normal_vector(b1, b2);
-                *normal=  norm;
-                *other_hit = id1;
-                return true;
+            *normal=  norm;
+            *other_hit = id1;
+            return true;
         }
     }
     return false;
+}
+static bool check_hit(u32 id, Vector3 * normal,u32 * other_hit){
+    int count =1;
+    Int3 lc = location_to_int3(trans.items[id].value.transform.translation);
+    bool hit0 = false;
+    for(int dz = -count; dz<= count; dz++){
+        for(int dy = -count; dy<=count; dy++){
+            for(int dx = -count; dx<=count; dx++){
+                if(lc.x+dx <0 || lc.x+dx>=TABLE_SIZE || lc.y+dy<0 || lc.y+dy>=TABLE_SIZE || lc.z+dz<0 || lc.z+dz>=TABLE_SIZE){
+                    continue;
+                }
+                if(Int3_equals(lc, (Int3){lc.x+dx, lc.y+dy, lc.z+dz})){
+                    hit0 = true;
+                }
+                u32Vec cmps = TABLE[lc.z+dz][lc.y+dy][lc.x+dx];
+                bool hit = check_hit_array(id, cmps,normal, other_hit);
+                if(hit){
+                    return true;
+                }
+            }
+        }
+    }
+    assert(hit0);
+    return false;
+}
+
+static bool check_hit_non_opt(u32 id, Vector3 * normal, u32 * other_hit){
+    u32Vec cmps = make_with_cap(0, u32, phys.length/2);
+    for(int i =0; i<phys.length; i++){
+        if(phys.items[i].is_valid){
+            v_append(cmps, i);
+        }
+    }
+    bool hit = check_hit_array(id, cmps, normal, other_hit);
+    unmake(cmps);
+    if(hit){
+        Int3 aloc = location_to_int3(trans.items[id].value.transform.translation);
+        Int3  bloc =  location_to_int3(trans.items[*other_hit].value.transform.translation);
+        Vector3 a = (Vector3){aloc.x, aloc.y, aloc.z};
+        Vector3 b = (Vector3){bloc.x, bloc.y, bloc.z};
+        printf("aloc:{%d, %d,%d}, bloc:{%d,%d,%d}, distance:%f\n", aloc.x, aloc.y, aloc.z, bloc.x, bloc.y, bloc.z, Vector3Distance(a,b));
+
+    }
+    return hit;
+}
+
+static float max_allowed_distance_non_opt(u32 id){
+    u32Vec cmps = make_with_cap(0, u32, phys.length/2);
+    for(int i =0; i<phys.length; i++){
+        if(phys.items[i].is_valid){
+            v_append(cmps, i);
+        }
+    }
+    float dist = max_allowed_distance_array(id, cmps);
+    unmake(cmps);
+    return dist;
 }
 
 static VectorTuple calc_hit_impulses(u32 id1, u32 id2, Vector3 normal_vector,float drag){
@@ -157,19 +305,20 @@ static void collision_iter(PhysicsComp * comp, Transform * transform, u32 id, fl
     if(Vector3Equals(comp->velocity, (Vector3){0.0, 0.0, 0.0})){
         return;
     }
+    Vector3 col_norm;
+    u32 collision_id;
+    //assert(!check_hit_non_opt(id, &col_norm, &collision_id));
     float max_travelled_dist = Vector3Length(Vector3Scale(comp->velocity, dt));
     float distance_travelled = 0.0;
     Vector3 norm = Vector3Normalize(comp->velocity);
     float min = min_dimension(comp->box);
-    Vector3 v = Vector3Scale(trans.items[id].value.transform.translation, 1/tile_size);
-    Int3 key = {v.x, v.y, v.z}; 
+    Int3 key = location_to_int3(trans.items[id].value.transform.translation);
+    Vector3 old_location = trans.items[id].value.transform.translation  ;
     while(distance_travelled<max_travelled_dist){
-        Vector3 col_norm;
-        u32 collision_id;
         float max_distance = max_allowed_distance(id);
+        if(max_distance>tile_size){max_distance = tile_size;}
         bool check = false;
-        Vector3 old_location = trans.items[id].value.transform.translation ; 
-        if(max_distance <= 0.01){
+        if(max_distance <= tile_size){
             assert(max_distance>-0.1);
             max_distance = min;
             check = true;
@@ -192,50 +341,112 @@ static void collision_iter(PhysicsComp * comp, Transform * transform, u32 id, fl
                 u32 other_old = other;
                 Vector3 old_norm = norm;
                 if(check_hit(id, &norm, &other)){
-                    trans.items[id].value.transform.translation = Vector3Add(trans.items[id].value.transform.translation, Vector3Scale(norm, 0.01));
+                    if(Vector3Length(norm)<0.00001){
+                        norm =(Vector3){1,0,0};
+                    }
+                    trans.items[id].value.transform.translation = Vector3Add(trans.items[id].value.transform.translation, Vector3Scale(norm,0.01));
                     other_old = other;
                     old_norm = norm;
                 }
                 if(!get_physics_comp(other_old)){
-                    comp->velocity = Vector3Reflect(comp->velocity, old_norm);
+                    assert(Vector3LengthSqr(old_norm) != 0.0);
+                    phys.items[id].value.velocity = Vector3Reflect(phys.items[id].value.velocity, old_norm);
                     break;
                 }
                 if(get_physics_comp(other_old)->movable){
                     VectorTuple tup = calc_hit_impulses(id, other_old, old_norm, 1.0);
-                    comp->velocity = tup.v1;
-                    get_physics_comp(other_old)->velocity = tup.v2;
+                    phys.items[id].value.velocity = tup.v1;
+                    phys.items[other_old].value.velocity= tup.v2;
                 } else{
-                    comp->velocity = Vector3Reflect(comp->velocity, old_norm);
+                    phys.items[id].value.velocity = Vector3Reflect(comp->velocity, old_norm);
                 }
                 break;
             }
         }
-
     }
-    Vector3 v0 = Vector3Scale(trans.items[id].value.transform.translation, 1/tile_size);
-    Int3 key0 = {v.x, v.y, v.z}; 
-    if(!Int3_equals(key0, key)){
-        u32Vec *vc = Int3u32VecHashTable_find(table,key);
-        if(vc){
-            int idx = -1;
-            for(int i =0; i<vc->length; i++){
-                if(vc->items[i] == id){
-                    idx = i;
-                }
-            }
-            v_remove((*vc), idx);
-        }
-        vc = Int3u32VecHashTable_find(table,key0); 
-        if(vc){
-            v_append((*vc), id);
-        } else{
-            u32Vec vec = make(0, u32);
-            v_append(vec, id);
-            Int3u32VecHashTable_insert(table, key0, vec);
-        }
-    }
+    Int3 loc = location_to_int3(trans.items[id].value.transform.translation);
+    v_append(TABLE[loc.z][loc.y][loc.x], id);
+    assert(TABLE[loc.z][loc.y][loc.x].items[TABLE[loc.z][loc.y][loc.x].length-1] == id);
 }
 static void run_single(float dt){
+    float min = 0.0;
+    float max = 0.0;
+    bool hit = false;
+    for(int i =0; i<phys.length; i++){
+        if(trans.items[i].is_valid&& phys.items[i].is_valid){
+            Vector3 value = trans.items[i].value.transform.translation;
+            if(!hit){
+                min = min(value.x, min(value.y, value.z));
+                max = max(value.x, max(value.y, value.z));
+            } else{
+                if(value.x<min){
+                    min= value.x;
+                }
+                if(value.y<min){
+                    min = value.y;
+                } 
+                if(value.z<min){
+                    min = value.z;
+                }
+                if(value.x>max){
+                    max = value.x;
+                }
+                if(value.y>max){
+                    max = value.y;
+                }
+                if(value.z>max){
+                    max = value.z;
+                }
+            }
+            hit = true;
+        }
+    }
+    if(!hit){
+        return;
+    }
+    tile_size = (max-min)/TABLE_SIZE;
+    if(tile_size<0.5){
+        tile_size = 0.5;
+    }
+    table_max = max;
+    table_min = min;
+    Int3 l1;
+    Int3 l2;
+    printf("\nframe begin\n");
+    Int3Vec locs = make(0, Int3);
+    for(int i =0; i<phys.length; i++){
+        if(!trans.items[i].is_valid){v_append(locs, (Int3){});continue;}
+        Int3 loc = location_to_int3(trans.items[i].value.transform.translation);
+        v_append(locs, loc);
+        int oldlen = TABLE[loc.z][loc.y][loc.x].length;
+        v_append((TABLE[loc.z][loc.y][loc.x]), i);
+        /*
+        printf("%d, %d,%d: ", loc.x,loc.y,loc.z);
+        u32Vec_print(TABLE[loc.z][loc.y][loc.x]);
+        */
+
+    }
+    /*
+    printf("\nbreak\n");
+    for(int i =0; i<trans.length; i++){
+        if(!phys.items[i].is_valid){continue;}
+        Vector3 v = trans.items[i].value.transform.translation;
+        Int3 v2 = locs.items[i];
+        if(u32Vec_find(TABLE[v2.z][v2.y][v2.x], i)>=0)continue;
+        for(int z = 0; z<TABLE_SIZE; z++){
+            for(int y =0; y<TABLE_SIZE; y++){
+                for(int x =0; x<TABLE_SIZE; x++){
+                    if(TABLE[z][y][x].length ==0) continue;
+                    printf("%d, %d,%d: ", x,y,z);
+                    u32Vec_print(TABLE[z][y][x]);
+                }
+            }
+        }
+        printf("%d\n",i);
+        printf("%d, %d, %d\n", v2.x, v2.y, v2.y);
+        printf("should be at {%d, %d, %d}\n", locs.items[i].x, locs.items[i].y, locs.items[i].z);
+        assert(u32Vec_find(TABLE[v2.z][v2.y][v2.x], i)>=0);
+    }*/
     for(int i =0; i<phys.length; i++){
         if(trans.items[i].is_valid&& phys.items[i].is_valid){
             if(!phys.items[i].value.movable){
@@ -246,28 +457,55 @@ static void run_single(float dt){
     }
 }
 static void *tick(void*){
-    table = Int3u32VecHashTable_create(1000, hash_int3, Int3_equals);
-    //run_single(GetFrameTime());
+    arena_reset(phys_arena);
+    for(int z = 0; z<TABLE_SIZE; z++){
+        for(int y =0; y<TABLE_SIZE; y++){
+            for(int x =0; x<TABLE_SIZE; x++){
+                TABLE[z][y][x].length = 0;
+            }
+        }
+    }
+    if(phys.capacity < RT.physics_comps.capacity){
+        OptionPhysicsComp * old = phys.items;
+        phys.items = arena_alloc(0, sizeof(OptionPhysicsComp)*RT.physics_comps.capacity);
+        phys.capacity = RT.physics_comps.capacity;
+        arena_free(0, old);
+    } 
+    if(trans.capacity < RT.transform_comps.capacity){
+        OptionTransformComp * old = trans.items;
+        trans.items = arena_alloc(0, sizeof(OptionTransformComp)*RT.transform_comps.capacity);
+        trans.capacity = RT.transform_comps.capacity;
+        arena_free(0, old);
+    } 
+    phys.length = RT.physics_comps.length;
+    memcpy(phys.items, RT.physics_comps.items, sizeof(OptionPhysicsComp)*phys.length);
+    trans.length = RT.transform_comps.length;
+    memcpy(trans.items, RT.transform_comps.items, sizeof(OptionTransformComp)*trans.length);
     run_single(GetFrameTime());
-    table = 0;
+    phys_done = true;
     return 0;
 }
-void run_physics(){
-    phys = clone(RT.physics_comps,0);
-    trans = clone(RT.transform_comps, 0);
-    for(int i =0; i<phys.length; i++){
-        phys.items[i].value.collided_this_frame = false;
-        assert(Vector3Equals(trans.items[i].value.transform.translation, RT.transform_comps.items[i].value.transform.translation));
+Arena * arena_create_sized(size_t reqsize);
+void init_physics_rt(){
+    phys_arena = arena_create();
+    for(int z = 0; z<TABLE_SIZE; z++){
+        for(int y =0; y<TABLE_SIZE; y++){
+            for(int x =0; x<TABLE_SIZE; x++){
+                TABLE[z][y][x] = (u32Vec)make(0, u32);
+            }
+        }
     }
+}
+void run_physics(){
+    phys_done = false;
+    //tick(0);
     pthread_create(&phys_thread, 0, tick, 0);
-
 }
 void finish_physics(){
+    while(!phys_done){}
+    phys_done = false;
     pthread_join(phys_thread,0);
-    OptionPhysicsCompVec oldphys = RT.physics_comps;
-    OptionTransformCompVec oldtrans = RT.transform_comps;
-    RT.transform_comps = trans;
-    RT.physics_comps = phys;
-    unmake(oldphys);
-    unmake(oldtrans);
+    RT.transform_comps = clone(trans,0);
+    RT.physics_comps = clone(phys,0);
+
 }

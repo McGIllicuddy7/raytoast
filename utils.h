@@ -144,11 +144,15 @@ enable_vec_type(f64);
 
 #define v_swap(a, b) {typeof(a) v_swap_temporary_value = a; a =b; b = v_swap_temporary_value;}
 #define v_append(vec, value)\
- {if(vec.capacity<vec.length+1){\
-    if (vec.capacity != 0){ vec.items =(typeof(vec.items))arena_realloc(vec.arena,vec.items,vec.capacity*sizeof(vec.items[0]), vec.capacity*sizeof(vec.items[0])*2);vec.capacity *= 2;}\
-     else{vec.capacity = 1;vec.items = (typeof(vec.items))arena_realloc(vec.arena, vec.items, 0, 1*sizeof(vec.items[0]));}\
-    } \
-    vec.items[vec.length++] = value;}
+ {if((vec).capacity<=(vec).length+1){\
+    if ((vec).capacity != 0){\
+	(vec).items =(typeof((vec).items))arena_realloc((vec).arena,(vec).items,(vec).capacity*sizeof((vec).items[0]), (vec).capacity*sizeof((vec).items[0])*2);(vec).capacity *= 2;}\
+     else{\
+		(vec).capacity = 16;\
+		(vec).items = (typeof((vec).items))arena_alloc((vec).arena, 16*sizeof((vec).items[0]));\
+		}\
+	 \
+  }   (vec).items[(vec).length] = value; (&(vec))->length+= 1;}
 
 #define unmake(vec) arena_free((vec).arena,(vec).items) 
 
@@ -481,6 +485,7 @@ typedef struct {\
 
 typedef struct Unit{
 }Unit;
+
 /*
 Implementation
 */
@@ -619,7 +624,9 @@ void * arena_realloc(Arena * arena, void * ptr, size_t previous_size, size_t new
     if (arena->previous_allocation == ptr && ptr){
         arena->next_ptr = (char*)ptr;
     }
+	pthread_mutex_unlock(&arena->lock);
     void * out = arena_alloc(arena, new_size);
+	pthread_mutex_lock(&arena->lock);
     memmove(out, ptr, previous_size);
 	pthread_mutex_unlock(&arena->lock);
     return out;

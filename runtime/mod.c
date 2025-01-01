@@ -5,6 +5,7 @@
 #define true 1
 #define false 0
 void run_physics();
+void init_physics_rt();
 void finish_physics();
 void default_on_tick(void *f, f32 dt){
 
@@ -54,13 +55,14 @@ void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
     RT.physics_comps =(OptionPhysicsCompVec)make(0, OptionPhysicsComp);
     RT.loaded_models = Stringu32HashTable_create(1000, hash_string, string_equals);
     RT.loaded_shaders = Stringu32HashTable_create(1000, hash_string, string_equals); 
-    for(int i =0; i<500; i++){
+    for(int i =0; i<10; i++){
         runtime_reserve();
     }
     SetTraceLogLevel(LOG_ALL);
     InitWindow(1600, 1024,"raytoast");
     SetTargetFPS(61);
     DisableCursor();
+    init_physics_rt();
     RT.camera.fovy = 90.0;
     RT.camera.position = (Vector3){0.0, 0.0, 0.0};
     RT.camera.up = (Vector3){0.0,0.0, 1.0};

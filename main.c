@@ -2,6 +2,7 @@
 #include <raylib.h>
 #include "runtime.h"
 #include <raymath.h>
+#include </opt/homebrew/include/gperftools/profiler.h>
 #include "utils.h"
 
 typedef struct{
@@ -36,11 +37,19 @@ Vector3 vec_from_sphere(float radius, float phi, float theta){
 }
 void TestEntity_on_tick(TestEntity * self, float delta_time){
     u32 id = self->entity.self_id;
+    PhysicsComp*cmp = get_physics_comp(self->entity.self_id);
+    if(!cmp){
+        return;
+    }
     Vector3 location = get_transform_comp(id)->transform.translation;
+    float vlen = Vector3Length(cmp->velocity);
+    if(vlen>0.5){
+        cmp->velocity =Vector3Scale(cmp->velocity, 0.5/vlen);
+    }
     if(Vector3Distance(location, (Vector3){0,0,0})<1e-16){
         //add_force(id, gen_random_vector(10.0));
     } else{
-        add_force(id, Vector3Scale(Vector3Normalize(location), -delta_time));
+        add_force(id, Vector3Scale(Vector3Normalize(location), -delta_time/10.0));
     }
 }
 
@@ -52,10 +61,10 @@ void setup(){
     u32 model_id = load_model("sphere.obj");
     ModelComp msh = {};
     msh.model_id = model_id;
-    green= create_shader(LoadShader("shader/sbase.vs", "shaders/white.fs"));
+    green= create_shader(LoadShader("shader/sbase.vs", "shaders/green.fs"));
     red = create_shader(LoadShader("shaders/base.vs", "shaders/red.fs"));
-    msh.shader_id = white;
-    int max = 1000;
+    msh.shader_id = green;
+    int max = 10000;
     int movable_amnt = 1;
     for(int i =0; i<max; i++){
         TestEntity * entity = malloc(sizeof(TestEntity));
@@ -65,13 +74,13 @@ void setup(){
         entity->entity.self_id = id;
         Transform transform;
         transform.translation = (Vector3){4*cos((f32)i/max *2.0*PI), 4 *sin((f32)i/max *2.0*PI), 0};
-        transform.translation = Vector3Scale(transform.translation, 32.0);
+        transform.translation = Vector3Scale(transform.translation, 1.0);
         float theta = random_float()*2*PI;
         float phi = random_float()*2*PI;
-        float radius = sqrt(random_float())*10.0;
+        float radius = sqrt(random_float())*25.00;
         float scale = 1.0;
         transform.translation = vec_from_sphere(radius, phi, theta);
-        msh.shader_id = i %2 == 0?  white: red;
+        msh.shader_id = i %movable_amnt == 0?  green: red;
         msh.model_id = cube_id;
         transform.scale = (Vector3){scale, scale, scale};
         transform.rotation = (Quaternion){0.0, 0.0, 0.0, 1.0};
@@ -79,12 +88,12 @@ void setup(){
         trans.transform = transform;
         trans.parent.is_valid = false;
         PhysicsComp phys = {};
-        phys.movable = 1;
+        phys.movable = i%movable_amnt ==0;
         phys.box.max = (Vector3){0.1, 0.1, 0.1};
         phys.box.min = (Vector3){-0.1, -0.1, -0.1};
         phys.box.max = Vector3Scale(phys.box.max, scale);
         phys.box.min = Vector3Scale(phys.box.min, scale);
-        phys.velocity = Vector3Negate(transform.translation);
+        phys.velocity = Vector3Negate(Vector3Normalize(transform.translation));
         phys.mass = scale;
         set_transform_comp(id, trans);
         set_model_comp(id, msh);
@@ -107,6 +116,7 @@ void on_render(){
 }
 
 int main(void){
+    ProfilerStart("dump.txt");
     tmp_init();
     init_runtime(setup, on_tick, on_render);
 } 
