@@ -263,7 +263,7 @@ static bool check_hit_non_opt(u32 id, Vector3 * normal, u32 * other_hit){
         Int3  bloc =  location_to_int3(trans.items[*other_hit].value.transform.translation);
         Vector3 a = (Vector3){aloc.x, aloc.y, aloc.z};
         Vector3 b = (Vector3){bloc.x, bloc.y, bloc.z};
-        printf("aloc:{%d, %d,%d}, bloc:{%d,%d,%d}, distance:%f\n", aloc.x, aloc.y, aloc.z, bloc.x, bloc.y, bloc.z, Vector3Distance(a,b));
+       // printf("aloc:{%d, %d,%d}, bloc:{%d,%d,%d}, distance:%f\n", aloc.x, aloc.y, aloc.z, bloc.x, bloc.y, bloc.z, Vector3Distance(a,b));
 
     }
     return hit;
@@ -412,7 +412,6 @@ static void run_single(float dt){
     table_min = min;
     Int3 l1;
     Int3 l2;
-    printf("\nframe begin\n");
     Int3Vec locs = make(0, Int3);
     for(int i =0; i<phys.length; i++){
         if(!trans.items[i].is_valid){v_append(locs, (Int3){});continue;}
@@ -461,7 +460,8 @@ static void *tick(void*){
     for(int z = 0; z<TABLE_SIZE; z++){
         for(int y =0; y<TABLE_SIZE; y++){
             for(int x =0; x<TABLE_SIZE; x++){
-                TABLE[z][y][x].length = 0;
+                //unmake(TABLE[z][y][x]);
+                TABLE[z][y][x] = (u32Vec)make(phys_arena, u32);
             }
         }
     }
@@ -487,11 +487,11 @@ static void *tick(void*){
 }
 Arena * arena_create_sized(size_t reqsize);
 void init_physics_rt(){
-    phys_arena = arena_create();
+    phys_arena = arena_create_sized(sizeof(PhysicsComp)*10000);
     for(int z = 0; z<TABLE_SIZE; z++){
         for(int y =0; y<TABLE_SIZE; y++){
             for(int x =0; x<TABLE_SIZE; x++){
-                TABLE[z][y][x] = (u32Vec)make(0, u32);
+                TABLE[z][y][x] = (u32Vec)make(phys_arena, u32);
             }
         }
     }

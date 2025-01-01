@@ -636,6 +636,7 @@ CTILS_STATIC
 void arena_reset(Arena * arena){
 	pthread_mutex_lock(&arena->lock);
     arena_destroy(arena->next);
+	arena->next = 0;
     arena->next_ptr= arena->buffer;
     arena->previous_allocation = 0;
 	pthread_mutex_unlock(&arena->lock);
