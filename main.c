@@ -46,7 +46,7 @@ void TestEntity_on_tick(TestEntity * self, float delta_time){
     if(Vector3Distance(location, (Vector3){0,0,0})<1e-16){
         //add_force(id, gen_random_vector(10.0));
     } else{
-        add_force(id, Vector3Scale(Vector3Normalize(location), -delta_time*1.01));
+        add_force(id,(Vector3){0,0, -0.98*delta_time*32.0});
     }
 }
 u32 create_wall(Vector3 location, Vector3 scale, u32 mesh_id, u32 shader_id){
@@ -57,15 +57,15 @@ u32 create_wall(Vector3 location, Vector3 scale, u32 mesh_id, u32 shader_id){
     floor->entity.self_id = id;
     Transform transform;
     transform.rotation = (Quaternion){0,0,0,1};
-    transform.scale = scale;
+    transform.scale = Vector3Scale(scale, 1.0);
     transform.translation = location;
     TransformComp trans ={};
     trans.transform = transform;
     trans.parent.is_valid = false;
     PhysicsComp phys = {};
     phys.movable =false;
-    phys.box.max = Vector3Scale(scale, 0.1);
-    phys.box.min = Vector3Scale(scale, -0.1);
+    phys.box.max = Vector3Scale(scale, 0.5);
+    phys.box.min = Vector3Scale(scale, -0.5);
     phys.velocity = (Vector3){};
     phys.mass = scale.x*scale.y*scale.z;
     set_transform_comp(id, trans);
@@ -80,7 +80,7 @@ void setup(){
     srand(time(0));
     SetRandomSeed(time(0));
     float rad = 1.0;
-    u32 cube_id = create_model(LoadModelFromMesh(GenMeshCube(0.2, 0.2, 0.2)));
+    u32 cube_id = create_model(LoadModelFromMesh(GenMeshCube(1.0, 1.0, 1.0)));
     u32 model_id = load_model("sphere.obj");
     ModelComp msh = {};
     msh.model_id = model_id;
@@ -88,23 +88,30 @@ void setup(){
     red = create_shader(LoadShader("shaders/base.vs", "shaders/red.fs"));
     white = create_shader(LoadShader("shaders/base.vs", "shaders/white.fs"));
     msh.shader_id = green;
-    int max = 10;
+    int max = 1000;
     int movable_amnt = 1;
+    int xc = 0;
+    int yc = 0;
     for(int i =0; i<max; i++){
+        if(i%10 ==0) yc++;
+        xc++;
+        xc = xc%10;
         TestEntity * entity = malloc(sizeof(TestEntity));
         memcpy(entity->bytes, "012345678910", 13);
         entity->entity.vtable = &TestEntityVTable;
         u32 id = create_entity((void*)entity).value;
         entity->entity.self_id = id;
         Transform transform;
-        transform.translation = (Vector3){4*cos((f32)i/max *2.0*PI), 4 *sin((f32)i/max *2.0*PI), 0};
+        transform.translation = (Vector3){5*xc-25, 5*yc-25, 20};
         transform.translation = Vector3Scale(transform.translation, 1.0);
         float theta = random_float()*2*PI;
         float phi = random_float()*2*PI;
-        float radius = sqrt(random_float())*25.00;
+        float radius = sqrt(random_float())*40;
         float scale = 1.0;
-        transform.translation = vec_from_sphere(radius, phi, theta);
-        msh.shader_id = i %movable_amnt == 0?  white: red;
+        //transform.translation = vec_from_sphere(radius, phi, theta);
+        //transform.translation.z = fabs(transform.translation.z)+5.0;
+        transform.scale = (Vector3){0.05, 0.05, 0.05};
+        msh.shader_id = red;
         msh.model_id = cube_id;
         transform.scale = (Vector3){scale, scale, scale};
         transform.rotation = (Quaternion){0.0, 0.0, 0.0, 1.0};
@@ -113,8 +120,8 @@ void setup(){
         trans.parent.is_valid = false;
         PhysicsComp phys = {};
         phys.movable = i%movable_amnt ==0;
-        phys.box.max = (Vector3){0.1, 0.1, 0.1};
-        phys.box.min = (Vector3){-0.1, -0.1, -0.1};
+        phys.box.max = (Vector3){0.5, 0.5, 0.5};
+        phys.box.min = (Vector3){-0.5, -0.5, -0.5};
         phys.box.max = Vector3Scale(phys.box.max, scale);
         phys.box.min = Vector3Scale(phys.box.min, scale);
         phys.velocity = Vector3Negate(Vector3Normalize(transform.translation));
@@ -122,9 +129,9 @@ void setup(){
         set_transform_comp(id, trans);
         set_model_comp(id, msh);
         set_physics_comp(id, phys);
-        get_camera()->position = (Vector3){-8.0, 0,0};
+        get_camera()->position = (Vector3){0,0,50};
     }
-    create_wall((Vector3){}, (Vector3){10,10,1}, cube_id, white);
+    create_wall((Vector3){}, (Vector3){50,50,1}, cube_id, white);
 }
 void on_tick(){
     static u128 frame_count = 0;
