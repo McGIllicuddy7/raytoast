@@ -91,24 +91,59 @@ static void u32Vec_print(u32Vec vec){
         }
     }
 }
-static Vector3 box_collision_normal_vector(BoundingBox a, BoundingBox b){
-    Vector3 norms[] = {{1,0,0}, {-1, 0,0}, {0,1,0}, {0,-1,0}, {0,0,1}, {0,0,-1}};
-    Vector3 av = Vector3Scale(Vector3Add(a.max, a.min), 0.5);
-    Vector3 bv = Vector3Scale(Vector3Add(b.max, b.min), 0.5);
-    Vector3 del = Vector3Subtract(bv, av);
-    float length = Vector3Length(del);
-    if(length<0.0001){
-        assert(false);
-        return (Vector3){0,0,1};
+static Vector3 box_collision_normal_vector(BoundingBox a, BoundingBox b, Vector3 velocity){
+    Vector3 norms[] = {{1,0,0}, {-1, 0,0}, {0,1,0}, {0,-1,0}, {0,0,1}, {0,0,-1}};    
+    float deltas[6] = {};
+    if(a.min.x >b.min.x && a.min.x<b.max.x){
+        deltas[0] = a.min.x-b.min.x;
     }
-    Vector3 norm = Vector3Scale(del, 1/length);
+    if(a.max.x >b.min.x && a.max.x<b.max.x){
+        deltas[1] = a.max.x-b.min.x;
+    }
+     if(a.min.y >b.min.y && a.min.y<b.max.y){
+        deltas[2] = a.min.y-b.min.y;
+     }
+    if(a.max.y >b.min.y && a.max.y<b.max.y){
+        deltas[3] = a.max.y-b.min.y;
+    }
+    if(a.min.z >b.min.z && a.min.z<b.max.z){
+        deltas[4] = a.min.z-b.min.z;
+    }
+    if(a.max.z >b.min.z && a.max.z<b.max.z){
+        deltas[5] = a.max.z-b.min.z;
+    }
     int idx = 0;
-    float min = 1000000.0;
+    float min =10000000.0;
+    int count = 0;
     for(int i =0; i<6; i++){
-        float dot = Vector3DotProduct(norm, norms[i]);
-        if(dot<min){
-            idx =i;
-            min = dot;
+        if(deltas[i] != 0){
+            if(deltas[i]<min){
+                min = deltas[i];
+                idx =i;
+                count += 1;
+            }
+        }
+    }
+    if(count>1){
+        float d = bb_distance(a,b);
+        Vector3 del_x = {0.1, 0.0, 0.0};
+        Vector3 del_y = {0.0, 0.1, 0.0};
+        Vector3 del_z = {0.0, 0.0, 0.1};
+        BoundingBox bx = {.min = Vector3Add(a.min, del_x), .max = Vector3Add(a.max, del_x)};
+        BoundingBox by = {.min = Vector3Add(a.min, del_y), .max = Vector3Add(a.max, del_y)};
+        BoundingBox bz = {.min = Vector3Add(a.min, del_z), .max = Vector3Add(a.max, del_z)};
+        float px = bb_distance(bx, b)-d;
+        float py = bb_distance(by, b)-d;
+        float pz = bb_distance(bz, b)-d;
+        Vector3 norm = Vector3Normalize((Vector3){px, py, pz});
+        float max = 0;
+        for(int i =0; i<6; i++){
+            if(deltas[i] ==0) continue;
+            float dot = Vector3DotProduct(norm, norms[i]);
+            if(dot>max){
+                max= dot;
+                idx = i;
+            }
         }
     }
     return norms[idx];
@@ -217,7 +252,7 @@ static bool check_hit_array(u32 id, u32Vec cmps,Vector3 * normal,u32 * other_hit
         b2.min = Vector3Add(b2.min, trans.items[id1].value.transform.translation);
         bool hit = CheckCollisionBoxes(b1, b2);
         if(hit){
-            const Vector3 norm = box_collision_normal_vector(b1, b2);
+            const Vector3 norm = box_collision_normal_vector(b1, b2, get_physics_comp(id)->velocity);
             *normal=  norm;
             *other_hit = id1;
             return true;
@@ -362,7 +397,6 @@ static void collision_iter(PhysicsComp * comp, Transform * transform, u32 id, fl
                 u32 other_old = other;
                 Vector3 old_norm = norm;
                 if(check_hit(id, &norm, &other)){
-                    assert(false);
                     if(Vector3Length(norm)<0.00001){
                         norm =(Vector3){1,0,0};
                     }
@@ -372,7 +406,6 @@ static void collision_iter(PhysicsComp * comp, Transform * transform, u32 id, fl
                 }
                 if(!get_physics_comp(other_old)){
                     phys.items[id].value.velocity = Vector3Negate(  phys.items[id].value.velocity);
-                    assert(false);
                     break;
                 }
                 if(get_physics_comp(other_old)->movable){
@@ -491,13 +524,13 @@ void init_physics_rt(){
 }
 void run_physics(){
     phys_done = false;
-    //tick(0);
-    pthread_create(&phys_thread, 0, tick, 0);
+    tick(0);
+    //pthread_create(&phys_thread, 0, tick, 0);
 }
 void finish_physics(){
     while(!phys_done){}
     phys_done = false;
-    pthread_join(phys_thread,0);
+    //pthread_join(phys_thread,0);
     RT.transform_comps = clone(trans,0);
     RT.physics_comps = clone(phys,0);
 }

@@ -46,7 +46,7 @@ void TestEntity_on_tick(TestEntity * self, float delta_time){
     if(Vector3Distance(location, (Vector3){0,0,0})<1e-16){
         //add_force(id, gen_random_vector(10.0));
     } else{
-        add_force(id, Vector3Scale(Vector3Normalize(location), -delta_time*5));
+        add_force(id, Vector3Scale(Vector3Normalize(location), -delta_time*1.01));
     }
 }
 u32 create_wall(Vector3 location, Vector3 scale, u32 mesh_id, u32 shader_id){
@@ -88,7 +88,7 @@ void setup(){
     red = create_shader(LoadShader("shaders/base.vs", "shaders/red.fs"));
     white = create_shader(LoadShader("shaders/base.vs", "shaders/white.fs"));
     msh.shader_id = green;
-    int max = 1;
+    int max = 10;
     int movable_amnt = 1;
     for(int i =0; i<max; i++){
         TestEntity * entity = malloc(sizeof(TestEntity));
