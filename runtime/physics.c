@@ -362,35 +362,39 @@ static void collision_iter(PhysicsComp * comp, Transform * transform, u32 id, fl
         if(check){
             u32 other = 0;
             bool hit = check_hit(id, &col_norm, &other);
-            float delt = 0.000001;
+            float delt = 0.00001;
             if(hit){
                 if(col_norm.x != 0){
                     if(col_norm.x == -1){
                         float c = phys.items[other].value.box.min.x+ trans.items[other].value.transform.translation.x-comp->box.max.x-delt;
-                        trans.items[id].value.transform.translation.x= c;
-                        assert(!check_hit_non_opt(id, &col_norm, &collision_id));
+                        float dc =c- trans.items[id].value.transform.translation.x;
+                        trans.items[id].value.transform.translation = Vector3Add(trans.items[id].value.transform.translation ,Vector3Scale(norm, dc));
                     } else{
                        float c = phys.items[other].value.box.max.x+ trans.items[other].value.transform.translation.x-comp->box.min.x+delt;
-                       trans.items[id].value.transform.translation.x = c;
+                        float dc =c- trans.items[id].value.transform.translation.x;
+                        trans.items[id].value.transform.translation = Vector3Add(trans.items[id].value.transform.translation ,Vector3Scale(norm, dc));
                     }
 
                 } else if(col_norm.y != 0){
                     if(col_norm.y == -1){
                         float c = phys.items[other].value.box.min.y-comp->box.max.y+ trans.items[other].value.transform.translation.y-delt;
-                        trans.items[id].value.transform.translation.y = c;
+                        float dc =c- trans.items[id].value.transform.translation.y;
+                        trans.items[id].value.transform.translation = Vector3Add(trans.items[id].value.transform.translation ,Vector3Scale(norm, dc));
                     } else{
-                       float c = phys.items[other].value.box.max.y+ trans.items[other].value.transform.translation.y-comp->box.min.y+delt;
-                        trans.items[id].value.transform.translation.y = c;
-
+                        float c = phys.items[other].value.box.max.y+ trans.items[other].value.transform.translation.y-comp->box.min.y+delt;
+                        float dc =c- trans.items[id].value.transform.translation.y;
+                        trans.items[id].value.transform.translation = Vector3Add(trans.items[id].value.transform.translation ,Vector3Scale(norm, dc));
                     }
                 }
                 else if(col_norm.z != 0){
                     if(col_norm.z == -1){
                         float c = phys.items[other].value.box.min.z+ trans.items[other].value.transform.translation.z-comp->box.max.z-delt;
-                        trans.items[id].value.transform.translation.z = c;
+                        float dc =c- trans.items[id].value.transform.translation.z;
+                        trans.items[id].value.transform.translation = Vector3Add(trans.items[id].value.transform.translation ,Vector3Scale(norm, dc));
                     } else{
-                       float c = phys.items[other].value.box.max.z+ trans.items[other].value.transform.translation.z-comp->box.min.z+delt;
-                        trans.items[id].value.transform.translation.z = c;
+                        float c = phys.items[other].value.box.max.z+ trans.items[other].value.transform.translation.z-comp->box.min.z+delt;
+                        float dc =c- trans.items[id].value.transform.translation.z;
+                        trans.items[id].value.transform.translation = Vector3Add(trans.items[id].value.transform.translation ,Vector3Scale(norm, dc));
                     }
                 }
 

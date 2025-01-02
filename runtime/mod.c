@@ -463,7 +463,7 @@ void attach_camera(u32 id, Transform relative_trans){
     RT.camera_parent = (Optionu32)Some(id);
     RT.camera_relative_transform = relative_trans;
 }
-void detach_camera(u32 id){
+void detach_camera(){
     RT.camera_parent = (Optionu32)None;
 }
 

@@ -46,7 +46,7 @@ void TestEntity_on_tick(TestEntity * self, float delta_time){
     if(Vector3Distance(location, (Vector3){0,0,0})<1e-16){
         //add_force(id, gen_random_vector(10.0));
     } else{
-        add_force(id,(Vector3){0,0, -0.98*delta_time*32.0});
+        add_force(id,Vector3Scale(Vector3Normalize(get_location(id)), -delta_time));
     }
 }
 u32 create_wall(Vector3 location, Vector3 scale, u32 mesh_id, u32 shader_id){
@@ -88,7 +88,7 @@ void setup(){
     red = create_shader(LoadShader("shaders/base.vs", "shaders/red.fs"));
     white = create_shader(LoadShader("shaders/base.vs", "shaders/white.fs"));
     msh.shader_id = green;
-    int max = 1000;
+    int max = 100;
     int movable_amnt = 1;
     int xc = 0;
     int yc = 0;
@@ -106,9 +106,9 @@ void setup(){
         transform.translation = Vector3Scale(transform.translation, 1.0);
         float theta = random_float()*2*PI;
         float phi = random_float()*2*PI;
-        float radius = sqrt(random_float())*40;
+        float radius = sqrt(random_float())*20+5;
         float scale = 1.0;
-        //transform.translation = vec_from_sphere(radius, phi, theta);
+        transform.translation = vec_from_sphere(radius, phi, theta);
         //transform.translation.z = fabs(transform.translation.z)+5.0;
         transform.scale = (Vector3){0.05, 0.05, 0.05};
         msh.shader_id = red;
@@ -129,9 +129,9 @@ void setup(){
         set_transform_comp(id, trans);
         set_model_comp(id, msh);
         set_physics_comp(id, phys);
-        get_camera()->position = (Vector3){0,0,50};
+        get_camera()->position = (Vector3){-20,0,0};
     }
-    create_wall((Vector3){}, (Vector3){50,50,1}, cube_id, white);
+    create_wall((Vector3){}, (Vector3){10,10,1}, cube_id, white);
 }
 void on_tick(){
     static u128 frame_count = 0;

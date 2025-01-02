@@ -91,9 +91,6 @@ u32 create_model(Model model);
 OptionModel get_model(u32 id);
 bool remove_model(u32 id);
 
-Camera3D * get_camera();
-
-
 void add_force(u32 id, Vector3 force);
 
 void call_event(u32 id, void (*func)(void* self, void * args), void * args);
@@ -112,3 +109,7 @@ Vector3 get_scale(u32 id);
 Vector3 get_forward_vector(u32 id);
 Vector3 get_up_vector(u32 id);
 Vector3 get_right_vector(u32 id);
+
+Camera3D * get_camera();
+void attach_camera_to(u32 id, Transform relative_trans);
+void detach_camera();
