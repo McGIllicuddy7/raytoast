@@ -41,6 +41,12 @@ void TestEntity_on_tick(TestEntity * self, float delta_time){
     if(!cmp){
         return;
     }
+    if(cmp->collided_this_frame){
+        get_model_comp(id)->shader_id = green;
+    } else{
+        get_model_comp(id)->shader_id = red; 
+    }
+    cmp->collided_this_frame = false;
     Vector3 location = get_transform_comp(id)->transform.translation;
     //printf("%f\n", Vector3Length(cmp->velocity));
     if(Vector3Distance(location, (Vector3){0,0,0})<1e-16){
@@ -88,7 +94,7 @@ void setup(){
     red = create_shader(LoadShader("shaders/base.vs", "shaders/red.fs"));
     white = create_shader(LoadShader("shaders/base.vs", "shaders/white.fs"));
     msh.shader_id = green;
-    int max = 100;
+    int max = 20;
     int movable_amnt = 1;
     int xc = 0;
     int yc = 0;
@@ -106,7 +112,7 @@ void setup(){
         transform.translation = Vector3Scale(transform.translation, 1.0);
         float theta = random_float()*2*PI;
         float phi = random_float()*2*PI;
-        float radius = sqrt(random_float())*20+5;
+        float radius = sqrt(random_float())*25+5;
         float scale = 1.0;
         transform.translation = vec_from_sphere(radius, phi, theta);
         //transform.translation.z = fabs(transform.translation.z)+5.0;
@@ -131,7 +137,7 @@ void setup(){
         set_physics_comp(id, phys);
         get_camera()->position = (Vector3){-20,0,0};
     }
-    create_wall((Vector3){}, (Vector3){10,10,1}, cube_id, white);
+   create_wall((Vector3){}, (Vector3){10,10,1}, cube_id, white);
 }
 void on_tick(){
     static u128 frame_count = 0;

@@ -22,6 +22,9 @@ typedef struct {
     Vector3 v1;
     Vector3 v2;
 }VectorTuple;
+typedef struct{
+    Vector3 points[8];
+}PointSet;
 size_t hash_int3(Int3 i){
     return hash_bytes((void *)&i, sizeof(Int3));
 }
@@ -91,26 +94,24 @@ static void u32Vec_print(u32Vec vec){
         }
     }
 }
+static PointSet bb_to_points(BoundingBox a){
+    return (PointSet){{
+        {a.min.x, a.min.y, a.min.z},
+        {a.min.x, a.min.y, a.max.z},
+        {a.min.x, a.max.y, a.min.z},
+        {a.min.x, a.max.y, a.max.z},
+
+        {a.max.x, a.min.y, a.min.z},
+        {a.max.x, a.min.y, a.max.z},
+        {a.max.x, a.max.y, a.min.z},
+        {a.max.x, a.max.y, a.max.z},
+    }};
+}
+static bool check_point_collides_with_box(Vector3 point, BoundingBox bx){
+    return (point.x<=bx.max.x && point.x>=bx.min.x )&& (point.y<=bx.max.y && point.y>=bx.min.y ) && (point.z<=bx.max.z && point.z>=bx.min.z );
+}
 static Vector3 box_collision_normal_vector(BoundingBox a, BoundingBox b, Vector3 velocity){
-    Vector3 norms[] = {{1,0,0}, {-1, 0,0}, {0,1,0}, {0,-1,0}, {0,0,1}, {0,0,-1}};    
-    float distances[6] = {};
-    for(int i =0; i<6; i++){
-        BoundingBox c;
-        c.min = Vector3Add(a.min, norms[i]);
-        c.max = Vector3Add(a.max, norms[i]);
-        if(!CheckCollisionBoxes(c,b)){
-            distances[i] = bb_distance(c,b);
-        }
-    }
-    int idx =0;
-    float max =0;
-    for(int i =0; i<6; i++){
-        if(distances[i]>max){
-            idx = i;
-            max = distances[i];
-        }
-    }
-    return norms[idx];
+    return Vector3Normalize(Vector3Negate(velocity));
 }
 static Int3 location_to_int3(Vector3 loc){
     float dx = loc.x-table_min;
@@ -318,112 +319,35 @@ static void store_locations(u32 id){
     }
 }
 static void collision_iter(PhysicsComp * comp, Transform * transform, u32 id, float dt){
-    dt = 0.01666;
-    if(!comp->movable){
-        return;
-    }
-    if(Vector3Equals(comp->velocity, (Vector3){0.0, 0.0, 0.0})){
-        return;
-    }
-    Vector3 col_norm;
-    u32 collision_id;
-    //assert(!check_hit_non_opt(id, &col_norm, &collision_id));
-    float max_travelled_dist = Vector3Length(phys.items[id].value.velocity)*dt;
-    float distance_travelled = 0.0;
-    const Vector3 norm = Vector3Normalize(phys.items[id].value.velocity);
-    float min = min_dimension(comp->box);
-    Int3 key = location_to_int3(trans.items[id].value.transform.translation);
-    Vector3 old_location = trans.items[id].value.transform.translation ;
-    while(distance_travelled<max_travelled_dist){
-        float max_distance = max_allowed_distance(id);
-        bool check = false;
-        if(max_distance <= tile_size){
-            assert(max_distance>-0.1);
-            max_distance = min;
-            check = true;
+    dt = 0.01666667;
+    Vector3 old_loc = transform->translation;
+    Vector3 disp = Vector3Scale(comp->velocity, dt);
+    Vector3 nv = Vector3Normalize(disp);
+    float distance = Vector3Length(disp);
+    float travelled = 0.0;
+    int fs = 0;
+    while(travelled<distance){
+        if(fs>10){
+            break;
         }
-        Vector3 displacement;
-        if(max_distance>tile_size/2.0){
-            max_distance = tile_size/2.0;
+        float dist = max_allowed_distance(id);
+        if(dist+travelled>distance){
+            dist = distance-travelled;
         }
-        assert(fabsf(Vector3Length(norm)- 1)<0.001);
-        if(distance_travelled+max_distance>max_travelled_dist){
-            displacement = Vector3Scale(norm,max_travelled_dist-distance_travelled);
-            distance_travelled = max_travelled_dist;
-        } else{
-            displacement = Vector3Scale(norm, max_distance);
-            if(Vector3Length(displacement)>tile_size){
-                printf("disp length:%f\n", Vector3Length(displacement));
-                assert(Vector3Length(displacement)<tile_size);
-            }
+        if(dist<0.05){
+            dist = 0.05;
         }
-        trans.items[id].value.transform.translation = Vector3Add(trans.items[id].value.transform.translation, displacement);
-        distance_travelled += Vector3Length(displacement);
-        if(check){
-            u32 other = 0;
-            bool hit = check_hit(id, &col_norm, &other);
-            float delt = 0.00001;
-            if(hit){
-                if(col_norm.x != 0){
-                    if(col_norm.x == -1){
-                        float c = phys.items[other].value.box.min.x+ trans.items[other].value.transform.translation.x-comp->box.max.x-delt;
-                        float dc =c- trans.items[id].value.transform.translation.x;
-                        trans.items[id].value.transform.translation = Vector3Add(trans.items[id].value.transform.translation ,Vector3Scale(norm, dc));
-                    } else{
-                       float c = phys.items[other].value.box.max.x+ trans.items[other].value.transform.translation.x-comp->box.min.x+delt;
-                        float dc =c- trans.items[id].value.transform.translation.x;
-                        trans.items[id].value.transform.translation = Vector3Add(trans.items[id].value.transform.translation ,Vector3Scale(norm, dc));
-                    }
-
-                } else if(col_norm.y != 0){
-                    if(col_norm.y == -1){
-                        float c = phys.items[other].value.box.min.y-comp->box.max.y+ trans.items[other].value.transform.translation.y-delt;
-                        float dc =c- trans.items[id].value.transform.translation.y;
-                        trans.items[id].value.transform.translation = Vector3Add(trans.items[id].value.transform.translation ,Vector3Scale(norm, dc));
-                    } else{
-                        float c = phys.items[other].value.box.max.y+ trans.items[other].value.transform.translation.y-comp->box.min.y+delt;
-                        float dc =c- trans.items[id].value.transform.translation.y;
-                        trans.items[id].value.transform.translation = Vector3Add(trans.items[id].value.transform.translation ,Vector3Scale(norm, dc));
-                    }
-                }
-                else if(col_norm.z != 0){
-                    if(col_norm.z == -1){
-                        float c = phys.items[other].value.box.min.z+ trans.items[other].value.transform.translation.z-comp->box.max.z-delt;
-                        float dc =c- trans.items[id].value.transform.translation.z;
-                        trans.items[id].value.transform.translation = Vector3Add(trans.items[id].value.transform.translation ,Vector3Scale(norm, dc));
-                    } else{
-                        float c = phys.items[other].value.box.max.z+ trans.items[other].value.transform.translation.z-comp->box.min.z+delt;
-                        float dc =c- trans.items[id].value.transform.translation.z;
-                        trans.items[id].value.transform.translation = Vector3Add(trans.items[id].value.transform.translation ,Vector3Scale(norm, dc));
-                    }
-                }
-
-                //trans.items[id].value.transform.translation = old_location;
-                if(!get_physics_comp(other)){
-                    assert(false);
-                    phys.items[id].value.velocity = Vector3Negate(  phys.items[id].value.velocity);
-                    break;
-                }
-                if(get_physics_comp(other)->movable){
-                    VectorTuple tup = calc_hit_impulses(id, other, col_norm, 1.0);
-                    phys.items[id].value.velocity = tup.v1;
-                    phys.items[other].value.velocity= tup.v2;
-                } else{
-                    printf("hit");
-                    printf("normal: {%f, %f, %f} ",col_norm.x, col_norm.y, col_norm.z);
-                    Vector3 v0 = phys.items[id].value.velocity;
-                    printf("first vel:{%f, %f, %f} ", v0.x, v0.y, v0.z);
-                    phys.items[id].value.velocity = Vector3Reflect(  phys.items[id].value.velocity, col_norm);
-                    v0 = phys.items[id].value.velocity;
-                    printf("seconf vel:{%f, %f, %f}\n", v0.x, v0.y, v0.z);
-                }
-                break;
-            }
+        transform->translation = Vector3Add(transform->translation, Vector3Scale(nv,dist));
+        Vector3 norm;
+        u32 other;
+        if(check_hit(id, &norm, &other)){
+            transform->translation = old_loc;
+            comp->velocity = Vector3Reflect(comp->velocity, norm);
+            break;
         }
-        //old_location = trans.items[id].value.transform.translation;
+        travelled += dist;
     }
     store_locations(id);
-    //assert(!check_hit_non_opt(id, &col_norm, &collision_id));
 }
 static void run_single(float dt){
     float min = 0.0;
@@ -522,13 +446,13 @@ void init_physics_rt(){
 }
 void run_physics(){
     phys_done = false;
-    //tick(0);
-    pthread_create(&phys_thread, 0, tick, 0);
+    tick(0);
+    //pthread_create(&phys_thread, 0, tick, 0);
 }
 void finish_physics(){
     while(!phys_done){}
     phys_done = false;
-    pthread_join(phys_thread,0);
+    //pthread_join(phys_thread,0);
     RT.transform_comps = clone(trans,0);
     RT.physics_comps = clone(phys,0);
 }
