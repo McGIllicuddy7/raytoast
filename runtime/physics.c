@@ -110,8 +110,28 @@ static PointSet bb_to_points(BoundingBox a){
 static bool check_point_collides_with_box(Vector3 point, BoundingBox bx){
     return (point.x<=bx.max.x && point.x>=bx.min.x )&& (point.y<=bx.max.y && point.y>=bx.min.y ) && (point.z<=bx.max.z && point.z>=bx.min.z );
 }
+static float min_dimension(BoundingBox bx){
+    return min((bx.max.x-bx.min.x),min((bx.max.y-bx.min.y), (bx.max.z-bx.min.z)));
+}
 static Vector3 box_collision_normal_vector(BoundingBox a, BoundingBox b, Vector3 velocity){
-    return Vector3Normalize(Vector3Negate(velocity));
+    Vector3 norms[6] = {{1,0,0}, {-1,0,0}, {0,1,0}, {0,-1, 0}, {0,0,1}, {0,0,-1}};
+    Vector3 out = Vector3Normalize(velocity);
+    float min_dt = 1000000.0;
+    float dt = 0.0;
+    float ts = min(min_dimension(a), min_dimension(b));
+    while(true){
+        for(int i =0; i<6; i++){
+            Vector3 tmp = Vector3Scale(Vector3Reflect(out, norms[i]),dt);
+            BoundingBox bx;
+            bx.max = Vector3Add(a.max,tmp);
+            bx.min = Vector3Add(a.min,tmp);
+            if(!CheckCollisionBoxes(bx, b)){
+                return norms[i];
+            }
+        }
+        dt += 0.01;
+    }
+    return norms[0];
 }
 static Int3 location_to_int3(Vector3 loc){
     float dx = loc.x-table_min;
@@ -139,9 +159,6 @@ static Int3 location_to_int3(Vector3 loc){
         z =TABLE_SIZE-1;
     }
     return (Int3){x,y,z};
-}
-static float min_dimension(BoundingBox bx){
-    return min((bx.max.x-bx.min.x),min((bx.max.y-bx.min.y), (bx.max.z-bx.min.z)));
 }
 static float max_allowed_distance_array(u32 id, u32Vec cmps){
     float min = tile_size;
