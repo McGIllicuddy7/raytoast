@@ -94,7 +94,7 @@ void setup(){
     red = create_shader(LoadShader("shaders/base.vs", "shaders/red.fs"));
     white = create_shader(LoadShader("shaders/base.vs", "shaders/white.fs"));
     msh.shader_id = green;
-    int max = 20;
+    int max = 200;
     int movable_amnt = 1;
     int xc = 0;
     int yc = 0;
@@ -112,7 +112,7 @@ void setup(){
         transform.translation = Vector3Scale(transform.translation, 1.0);
         float theta = random_float()*2*PI;
         float phi = random_float()*2*PI;
-        float radius = sqrt(random_float())*25+5;
+        float radius = sqrt(random_float())*60+5;
         float scale = 1.0;
         transform.translation = vec_from_sphere(radius, phi, theta);
         //transform.translation.z = fabs(transform.translation.z)+5.0;

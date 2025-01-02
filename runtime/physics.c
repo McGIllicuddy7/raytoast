@@ -116,22 +116,27 @@ static float min_dimension(BoundingBox bx){
 static Vector3 box_collision_normal_vector(BoundingBox a, BoundingBox b, Vector3 velocity){
     Vector3 norms[6] = {{1,0,0}, {-1,0,0}, {0,1,0}, {0,-1, 0}, {0,0,1}, {0,0,-1}};
     Vector3 out = Vector3Normalize(velocity);
-    float min_dt = 1000000.0;
     float dt = 0.0;
+    float min_angle = 1.0;
+    int min_idx = 0;
     float ts = min(min_dimension(a), min_dimension(b));
     while(true){
         for(int i =0; i<6; i++){
             Vector3 tmp = Vector3Scale(Vector3Reflect(out, norms[i]),dt);
             BoundingBox bx;
+            if(Vector3DotProduct(tmp, out)<min_angle){
+                min_angle = Vector3DotProduct(tmp, out);
+                min_idx = i;
+            }
             bx.max = Vector3Add(a.max,tmp);
             bx.min = Vector3Add(a.min,tmp);
             if(!CheckCollisionBoxes(bx, b)){
-                return norms[i];
+                return Vector3Negate(norms[i]);
             }
         }
         dt += 0.01;
     }
-    return norms[0];
+    return norms[min_idx];
 }
 static Int3 location_to_int3(Vector3 loc){
     float dx = loc.x-table_min;
@@ -324,9 +329,9 @@ static void store_locations(u32 id){
     int dy = ceil((box.max.y-box.min.y)/tile_size); 
     int dz = ceil((box.max.z-box.min.z)/tile_size); 
     Int3 loc = location_to_int3(box.min);
-    for(int z =0; z<dz; z++){
-        for(int y =0; y<dy; y++){
-            for(int x= 0; x<dx; x++){
+    for(int z =-1; z<dz+1; z++){
+        for(int y =-1; y<dy+1; y++){
+            for(int x= -1; x<dx+1; x++){
                 if(x+loc.x >=TABLE_SIZE || loc.x+x <0|| loc.y+y>=TABLE_SIZE || loc.y+y<0 || loc.z+z >= TABLE_SIZE || loc.z+z<0){
                     continue;
                 }
@@ -337,12 +342,17 @@ static void store_locations(u32 id){
 }
 static void collision_iter(PhysicsComp * comp, Transform * transform, u32 id, float dt){
     dt = 0.01666667;
-    Vector3 old_loc = transform->translation;
+    static bool hit=false;
+    if(hit){
+        dt = 0.00;
+    }
     Vector3 disp = Vector3Scale(comp->velocity, dt);
     Vector3 nv = Vector3Normalize(disp);
     float distance = Vector3Length(disp);
     float travelled = 0.0;
     int fs = 0;
+    Vector3 norm;
+    u32 other;
     while(travelled<distance){
         if(fs>10){
             break;
@@ -351,20 +361,32 @@ static void collision_iter(PhysicsComp * comp, Transform * transform, u32 id, fl
         if(dist+travelled>distance){
             dist = distance-travelled;
         }
-        if(dist<0.05){
-            dist = 0.05;
+        if(dist<0.01){
+            dist = 0.01;
         }
+        Vector3 cache = transform->translation;
         transform->translation = Vector3Add(transform->translation, Vector3Scale(nv,dist));
-        Vector3 norm;
-        u32 other;
         if(check_hit(id, &norm, &other)){
-            transform->translation = old_loc;
-            comp->velocity = Vector3Reflect(comp->velocity, norm);
+            transform->translation=cache;
+            PhysicsComp * ocmp = &phys.items[other].value;
+            if(!ocmp->movable){
+                comp->velocity = Vector3Reflect(comp->velocity, norm);
+            } else{
+                VectorTuple v = calc_hit_impulses(id, other, norm, 1.0);
+                comp->velocity = v.v1;
+                ocmp->velocity = v.v2;
+            }
+
             break;
         }
         travelled += dist;
+        //old_loc = transform->translation;
     }
     store_locations(id);
+    if(check_hit_non_opt(id, &norm, &other)){
+        hit = true;
+        comp->collided_this_frame = true;
+    }
 }
 static void run_single(float dt){
     float min = 0.0;
@@ -463,13 +485,13 @@ void init_physics_rt(){
 }
 void run_physics(){
     phys_done = false;
-    tick(0);
-    //pthread_create(&phys_thread, 0, tick, 0);
+    //tick(0);
+    pthread_create(&phys_thread, 0, tick, 0);
 }
 void finish_physics(){
     while(!phys_done){}
     phys_done = false;
-    //pthread_join(phys_thread,0);
+    pthread_join(phys_thread,0);
     RT.transform_comps = clone(trans,0);
     RT.physics_comps = clone(phys,0);
 }
