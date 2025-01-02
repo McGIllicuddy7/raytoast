@@ -42,17 +42,40 @@ void TestEntity_on_tick(TestEntity * self, float delta_time){
         return;
     }
     Vector3 location = get_transform_comp(id)->transform.translation;
-    float vlen = Vector3Length(cmp->velocity);
-    if(vlen>0.5){
-        cmp->velocity =Vector3Scale(cmp->velocity, 0.5/vlen);
-    }
+    //printf("%f\n", Vector3Length(cmp->velocity));
     if(Vector3Distance(location, (Vector3){0,0,0})<1e-16){
         //add_force(id, gen_random_vector(10.0));
     } else{
-        add_force(id, Vector3Scale(Vector3Normalize(location), -delta_time/10.0));
+        add_force(id, Vector3Scale(Vector3Normalize(location), -delta_time*5));
     }
 }
-
+u32 create_wall(Vector3 location, Vector3 scale, u32 mesh_id, u32 shader_id){
+    TestEntity * floor = malloc(sizeof(TestEntity));
+    memcpy(floor->bytes, "012345678910", 13);
+    floor->entity.vtable = &TestEntityVTable;
+    u32 id = create_entity((void*)floor).value;
+    floor->entity.self_id = id;
+    Transform transform;
+    transform.rotation = (Quaternion){0,0,0,1};
+    transform.scale = scale;
+    transform.translation = location;
+    TransformComp trans ={};
+    trans.transform = transform;
+    trans.parent.is_valid = false;
+    PhysicsComp phys = {};
+    phys.movable =false;
+    phys.box.max = Vector3Scale(scale, 0.1);
+    phys.box.min = Vector3Scale(scale, -0.1);
+    phys.velocity = (Vector3){};
+    phys.mass = scale.x*scale.y*scale.z;
+    set_transform_comp(id, trans);
+    ModelComp msh = {};
+    msh.model_id =mesh_id;
+    msh.shader_id=shader_id;
+    set_model_comp(id, msh);
+    set_physics_comp(id, phys);
+    return id;
+}
 void setup(){
     srand(time(0));
     SetRandomSeed(time(0));
@@ -61,10 +84,11 @@ void setup(){
     u32 model_id = load_model("sphere.obj");
     ModelComp msh = {};
     msh.model_id = model_id;
-    green= create_shader(LoadShader("shader/sbase.vs", "shaders/green.fs"));
+    green= create_shader(LoadShader("shaders/base.vs", "shaders/green.fs"));
     red = create_shader(LoadShader("shaders/base.vs", "shaders/red.fs"));
+    white = create_shader(LoadShader("shaders/base.vs", "shaders/white.fs"));
     msh.shader_id = green;
-    int max = 10000;
+    int max = 1;
     int movable_amnt = 1;
     for(int i =0; i<max; i++){
         TestEntity * entity = malloc(sizeof(TestEntity));
@@ -80,7 +104,7 @@ void setup(){
         float radius = sqrt(random_float())*25.00;
         float scale = 1.0;
         transform.translation = vec_from_sphere(radius, phi, theta);
-        msh.shader_id = i %movable_amnt == 0?  green: red;
+        msh.shader_id = i %movable_amnt == 0?  white: red;
         msh.model_id = cube_id;
         transform.scale = (Vector3){scale, scale, scale};
         transform.rotation = (Quaternion){0.0, 0.0, 0.0, 1.0};
@@ -100,8 +124,7 @@ void setup(){
         set_physics_comp(id, phys);
         get_camera()->position = (Vector3){-8.0, 0,0};
     }
-    //Entity * ent = create_test_rust_entity();
-    //create_entity(ent);
+    create_wall((Vector3){}, (Vector3){10,10,1}, cube_id, white);
 }
 void on_tick(){
     static u128 frame_count = 0;

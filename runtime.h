@@ -14,6 +14,7 @@ typedef struct {
     void (*on_render)(void * self);
     void (*on_setup)(void* self,u32 self_id);
     void (*destructor)(void *self);
+    void (*serialize)(void *self);
 }EntityVTable;
 #ifndef RUNTIME_MOD
 extern EntityVTable entity_default_vtable;
@@ -33,6 +34,7 @@ void default_on_tick(void *f, f32 dt);
 void default_on_setup(void*self ,u32 self_id);
 void default_on_render(void * self);
 void default_on_destroy(void * self);
+void default_serialize(void * self);
 typedef Entity * EntityRef;
 enable_vec_type(EntityRef);
 enable_option_type(Model);
@@ -54,6 +56,8 @@ typedef struct {
     Stringu32HashTable* loaded_models;
     Stringu32HashTable* loaded_shaders;
     Camera3D camera;
+    Optionu32 camera_parent;
+    Transform camera_relative_transform;
     RenderTexture2D target;
     bool failed_to_create;
     EventNode * event_queue;
@@ -89,6 +93,7 @@ bool remove_model(u32 id);
 
 Camera3D * get_camera();
 
+
 void add_force(u32 id, Vector3 force);
 
 void call_event(u32 id, void (*func)(void* self, void * args), void * args);
@@ -99,3 +104,11 @@ void unload_shader(u32 id);
 u32 load_model(const char * path);
 void unload_model(u32 id);
 void unload_level();
+
+Vector3 get_location(u32 id);
+Quaternion get_rotation(u32 id);
+Vector3 get_scale(u32 id);
+
+Vector3 get_forward_vector(u32 id);
+Vector3 get_up_vector(u32 id);
+Vector3 get_right_vector(u32 id);

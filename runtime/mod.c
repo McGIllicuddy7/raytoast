@@ -92,6 +92,11 @@ void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
             }
         }
         Material mat = LoadMaterialDefault();
+        if(RT.camera_parent.is_valid){
+            RT.camera.position = get_transform_comp(RT.camera_parent.value)->transform.translation;
+            RT.camera.target = get_forward_vector(RT.camera_parent.value);
+            RT.camera.up = get_up_vector(RT.camera_parent.value);
+        }
         BeginMode3D(RT.camera);
         for (int i =0; i<RT.model_comps.length; i++){
             if(!RT.entities.items[i]){
@@ -123,6 +128,12 @@ void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
                 msh.value.materials[0] = mat;
                 DrawModel(msh.value,trans->transform.translation, 1.0,WHITE);
                 msh.value.materials[0] = old;
+                if(get_physics_comp(i)){
+                    BoundingBox bx = get_physics_comp(i)->box;
+                    bx.max = Vector3Add(bx.max, get_location(i));
+                    bx.min = Vector3Add(bx.min, get_location(i));
+                    DrawBoundingBox(bx, GREEN);
+                }
             }
         }
         EndMode3D();
@@ -446,4 +457,42 @@ float transform_set_mass(u32 root){
         }
     }
     return out;
+}
+
+void attach_camera(u32 id, Transform relative_trans){
+    RT.camera_parent = (Optionu32)Some(id);
+    RT.camera_relative_transform = relative_trans;
+}
+void detach_camera(u32 id){
+    RT.camera_parent = (Optionu32)None;
+}
+
+
+Vector3 get_location(u32 id){
+    if(get_transform_comp(id)->parent.is_valid){
+        Vector3 base = Vector3RotateByQuaternion(get_transform_comp(id)->transform.translation,  get_rotation(get_transform_comp(id)->parent.value));
+        return Vector3Add(base,  get_location(get_transform_comp(id)->parent.value));
+    }
+    return get_transform_comp(id)->transform.translation; 
+}
+Quaternion get_rotation(u32 id){
+    if(get_transform_comp(id)->parent.is_valid){
+        return QuaternionAdd(get_transform_comp(id)->transform.rotation, get_rotation(get_transform_comp(id)->parent.value));
+    }
+    return get_transform_comp(id)->transform.rotation;
+}
+Vector3 get_scale(u32 id){
+    if(get_transform_comp(id)->parent.is_valid){
+        return Vector3Multiply(get_transform_comp(id)->transform.scale ,get_scale(get_transform_comp(id)->parent.value));
+    }
+    return get_transform_comp(id)->transform.scale;
+}
+Vector3 get_forward_vector(u32 id){
+    return Vector3RotateByQuaternion((Vector3){1,0,0}, get_rotation(id));
+}
+Vector3 get_up_vector(u32 id){
+    return Vector3RotateByQuaternion((Vector3){0,0,1}, get_rotation(id));
+}
+Vector3 get_right_vector(u32 id){
+    return Vector3RotateByQuaternion((Vector3){0,1,0}, get_rotation(id));
 }
