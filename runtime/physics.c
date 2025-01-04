@@ -317,8 +317,12 @@ static VectorTuple calc_hit_impulses(u32 id1, u32 id2, Vector3 normal_vector,flo
     const float vb2 = ((2*ma)/(ma+mb)*va1+(mb-ma)/(ma+mb)*vb1)*drag;
     const float dela = va2-va1;
     const float delb = vb2-vb1;
-    const Vector3 va =Vector3Scale(normal_vector, dela);
-    const Vector3 vb = Vector3Scale(normal_vector, delb);
+    Vector3 va =Vector3Scale(normal_vector, dela);
+    Vector3 vb = Vector3Scale(normal_vector, delb);
+    Vector3 del = Vector3Normalize(Vector3Subtract(trans.items[id1].value.transform.translation,trans.items[id2].value.transform.translation));
+    if(Vector3DotProduct(va, del)<0.0){
+            return (VectorTuple){Vector3Negate(Vector3Add(base_a1, va)),Vector3Negate(Vector3Add(base_b1, vb))};
+    }
     return (VectorTuple){Vector3Add(base_a1, va),Vector3Add(base_b1, vb)};
 }
 static void store_locations(u32 id){

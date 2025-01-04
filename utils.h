@@ -15,6 +15,7 @@
 #include <stdint.h>
 #include <math.h>
 #include <pthread.h>
+#include <signal.h>
 /*
 	Initial Defines
 */
@@ -43,6 +44,8 @@ void debug_alloc_and_global_free_counts();
 #define str_type char
 #endif
 #define nil 0
+
+#define todo(...) {fprintf(stderr, "todo " __VA_OPT__("%s ")"line:%d, file:%s""\n",__VA_ARGS__ __VA_OPT__(,)__LINE__, __FILE__ ); raise(SIGINT);}
 typedef unsigned char Byte;
 typedef int8_t i8;
 typedef int16_t i16;
