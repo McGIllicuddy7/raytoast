@@ -2,7 +2,7 @@ files = runtime/mod.c runtime/physics.c main.c utils_impl.c runtime/serializer.c
 flags = -std=gnu2x  -I /opt/homebrew/include -L /opt/homebrew/lib -pg 
 debug = -g3 -fsanitize=address ./rusty/target/debug/librusty.a
 release = -O2 ./rusty/target/release/librusty.a 
-libs=  -l raylib -l profiler
+libs=  -l raylib -lm 
 make: $(files)
 	cd rusty && cargo build 
 	cd ..

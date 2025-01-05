@@ -496,6 +496,8 @@ void finish_physics(){
     while(!phys_done){}
     phys_done = false;
     pthread_join(phys_thread,0);
+    unmake(RT.transform_comps);
+    unmake(RT.physics_comps);
     RT.transform_comps = clone(trans,0);
     RT.physics_comps = clone(phys,0);
 }

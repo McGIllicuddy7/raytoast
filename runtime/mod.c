@@ -157,6 +157,7 @@ void unload_level(){
     for(int i =0; i<RT.entities.length; i++){
         if(RT.entities.items[i]){
             RT.entities.items[i]->vtable->destructor(RT.entities.items[i]);
+            free(RT.entities.items[i]);
         }
     }
     unmake(RT.entities);
