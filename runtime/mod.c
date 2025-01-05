@@ -1,3 +1,4 @@
+#include <raylib.h>
 #define RUNTIME_MOD
 #include "../runtime.h"
 #include <raymath.h>
@@ -70,7 +71,8 @@ void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
     RT.camera.projection = CAMERA_PERSPECTIVE;
     RT.target = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
     setup();
-
+    Material mat = LoadMaterialDefault();
+    Material svd_mat = mat;
     while(!WindowShouldClose()){
         if (RT.failed_to_create){
             runtime_reserve();
@@ -91,7 +93,6 @@ void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
                 RT.entities.items[i]->vtable->on_render( RT.entities.items[i]);
             }
         }
-        Material mat = LoadMaterialDefault();
         if(RT.camera_parent.is_valid){
             RT.camera.position = get_transform_comp(RT.camera_parent.value)->transform.translation;
             RT.camera.target = get_forward_vector(RT.camera_parent.value);
@@ -147,6 +148,7 @@ void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
         process_events();
         tmp_reset();
     }
+    UnloadMaterial(svd_mat);
     unload_level();
     CloseWindow();
 }
