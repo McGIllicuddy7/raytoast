@@ -2,6 +2,7 @@
 #include <raylib.h>
 #include "runtime.h"
 #include <raymath.h>
+
 #include "utils.h"
 
 typedef struct{
@@ -151,6 +152,7 @@ void on_render(){
 }
 
 int main(void){
+    //ProfilerStart("dump.txt");
     tmp_init();
     init_runtime(setup, on_tick, on_render);
 } 

@@ -61,6 +61,7 @@ typedef struct {
     RenderTexture2D target;
     bool failed_to_create;
     EventNode * event_queue;
+    bool paused;
 }Runtime;
 
 #ifndef RUNTIME_MOD

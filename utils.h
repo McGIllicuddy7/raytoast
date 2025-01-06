@@ -45,7 +45,7 @@ void debug_alloc_and_global_free_counts();
 #endif
 #define nil 0
 
-#define todo(...) {fprintf(stderr, "todo " __VA_OPT__("%s ")"line:%d, file:%s""\n",__VA_ARGS__ __VA_OPT__(,)__LINE__, __FILE__ ); raise(SIGINT);}
+#define todo(...) {fprintf(stderr, "todo " __VA_OPT__("%s ")"line:%d, file:%s""\n",__VA_ARGS__ __VA_OPT__(,)__LINE__, __FILE__ ); raise(SIGTRAP);}
 typedef unsigned char Byte;
 typedef int8_t i8;
 typedef int16_t i16;
