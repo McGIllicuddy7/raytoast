@@ -145,9 +145,11 @@ Vector3 get_scale(u32 id){
     }
     return get_transform_comp(id)->transform.scale;
 }
+
 Vector3 get_forward_vector(u32 id){
     return Vector3RotateByQuaternion((Vector3){1,0,0}, get_rotation(id));
 }
+
 Vector3 get_up_vector(u32 id){
     return Vector3RotateByQuaternion((Vector3){0,0,1}, get_rotation(id));
 }
@@ -165,6 +167,7 @@ bool set_model_comp(u32 id, ModelComp model){
     RT.model_comps.items[id] = (OptionModelComp)Some(model); 
     return true;
 }
+
 ModelComp * get_model_comp(u32 id){
     if(id>RT.entities.length){
         return 0;
@@ -177,6 +180,7 @@ ModelComp * get_model_comp(u32 id){
     }
     return 0;
 }
+
 bool remove_model_comp(u32 id){
     if(id>RT.entities.length){
         return false;
@@ -187,9 +191,30 @@ bool remove_model_comp(u32 id){
     RT.model_comps.items[id] = (OptionModelComp)None;
     return true;
 }
+
 void add_force(u32 id, Vector3 force){
     PhysicsComp * phys = get_physics_comp(id);
     if(phys){
         phys->velocity = Vector3Add(phys->velocity, Vector3Scale(force, 1/phys->mass));
     }
+}
+
+void attach_camera_to(u32 id, Transform relative_trans){
+    RT.camera_parent = (Optionu32)Some(id);
+    RT.camera_relative_transform = relative_trans;
+}
+void detach_camera(){
+    RT.camera_parent = (Optionu32)None;
+}
+Transform transform_default(){
+    Transform out = {};
+    out.scale = (Vector3){1,1,1};
+    out.rotation = (Quaternion){0,0,0,1};
+    return out;
+}
+
+Quaternion quat_from_vector(Vector3 loc){
+    float phi = asin(loc.z);
+    float theta = atan2(loc.y, loc.x);
+    return QuaternionFromEuler(0, -phi,theta);
 }

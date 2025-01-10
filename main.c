@@ -138,6 +138,8 @@ void setup(){
         get_camera()->position = (Vector3){-20,0,0};
     }
    create_wall((Vector3){}, (Vector3){10,10,1}, cube_id, white);
+   attach_camera_to(0, transform_default());
+   get_transform_comp(0)->transform.rotation =  quat_from_vector(Vector3Normalize(Vector3Negate( get_transform_comp(0)->transform.translation)));
 }
 void on_tick(){
     static u128 frame_count = 0;

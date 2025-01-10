@@ -13,6 +13,8 @@ enable_vec_type(OptionTransformComp);
 typedef struct{
     u32 shader_id;
     u32 model_id;
+    i32 anim_id;
+    u32 anim_frame;
 }ModelComp;
 enable_option_type(ModelComp);
 enable_vec_type(OptionModelComp);

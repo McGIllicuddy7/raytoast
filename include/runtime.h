@@ -14,7 +14,7 @@ typedef struct {
     void (*on_render)(void * self);
     void (*on_setup)(void* self,u32 self_id);
     void (*destructor)(void *self);
-    void (*serialize)(void *self);
+    ByteVec (*serialize)(void *self);
 }EntityVTable;
 #ifndef RUNTIME_MOD
 extern EntityVTable entity_default_vtable;
@@ -91,15 +91,16 @@ bool remove_shader(u32 id);
 u32 create_model(Model model);
 OptionModel get_model(u32 id);
 bool remove_model(u32 id);
-
 void add_force(u32 id, Vector3 force);
 
 void call_event(u32 id, void (*func)(void* self, void * args), void * args);
 
 u32 load_shader(const char * vertex_path, const char *frag_path);
+String* get_shader_name(u32 id);
 void unload_shader(u32 id);
 
 u32 load_model(const char * path);
+String* get_model_name(u32 id);
 void unload_model(u32 id);
 
 u32 load_sound();
@@ -116,3 +117,6 @@ Vector3 get_right_vector(u32 id);
 Camera3D * get_camera();
 void attach_camera_to(u32 id, Transform relative_trans);
 void detach_camera();
+Transform transform_default();
+
+Quaternion quat_from_vector(Vector3 location);

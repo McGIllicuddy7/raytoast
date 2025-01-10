@@ -22,11 +22,12 @@ pub struct EntityVTable {
     pub on_render:*const extern fn(*const c_void), 
     pub on_setup:*const extern fn(*const c_void, u32),
     pub destructor:*const extern fn(*const c_void),
+    pub serialize: * const extern fn(*const c_void, arena:*mut c_funcs::Arena)->CVec<u8>
 }
 #[allow(unused)]
 macro_rules! setup_vtable {
     ($T:ident, $name:ident, $destructor:ident, $setup_fn_name:ident) => {
-        static $name:EntityVTable = EntityVTable{on_tick:$T::on_tick as OnTick,on_render:$T::on_render as OnRender, on_setup:$T::on_setup as OnSetup, destructor:$destructor as Destructor};
+        static $name:EntityVTable = EntityVTable{on_tick:$T::on_tick as OnTick,on_render:$T::on_render as OnRender, on_setup:$T::on_setup as OnSetup, destructor:$destructor as Destructor, serialize:$T::serialize as Serializer};
         pub fn $setup_fn_name()->CEntity{
             CEntity{vtable:&$name  as *const EntityVTable, self_id:0}
         }
@@ -39,6 +40,7 @@ pub type OnTick = *const extern fn(*const c_void,f32);
 pub type OnRender = *const extern fn(*const c_void);
 pub type OnSetup = *const extern fn(*const c_void, u32);
 pub type Destructor = *const extern fn (*const c_void);
+pub type Serializer = *const extern fn(*const c_void, arena:*mut c_funcs::Arena)->CVec<u8>;
 #[allow(unused)]
 pub trait Entity: {
     fn on_tick(&mut self, dt:f32){
@@ -52,6 +54,9 @@ pub trait Entity: {
     }
     fn destructor(&mut self){
 
+    }
+    fn serialize(&self, arena:*mut c_funcs::Arena)->CVec<u8>{
+        return CVec { items:std::ptr::null_mut(), length: 0,capacity: 0, arena: std::ptr::null_mut() };
     }
 } 
 #[repr(C)]
@@ -119,7 +124,9 @@ pub struct Mesh{
     pub vao_id:u32, 
     pub vbo_id:*mut u32, 
 }
-
+pub struct Model{
+    
+}
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct Vector3{
@@ -169,9 +176,9 @@ pub struct TransformComp{
 
 #[repr(C)]
 #[derive(Clone, Copy)]
-pub struct MeshComp{
+pub struct ModelComp{
     pub shader_id:u32,
-    pub mesh_id:u32,
+    pub model_id:u32,
 }
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -223,9 +230,9 @@ pub mod c_funcs{
         pub fn get_physics_comp(id:u32)->*mut PhysicsComp;
         pub fn remove_physics_comp(id:u32)->bool;
         
-        pub fn set_mesh_comp(id:u32,mesh:MeshComp)->bool;
-        pub fn get_mesh_comp(id:u32)->*mut MeshComp;
-        pub fn remove_mesh_comp(id:u32)->bool;
+        pub fn set_model_comp(id:u32,model:ModelComp)->bool;
+        pub fn get_model_comp(id:u32)->*mut ModelComp;
+        pub fn remove_model_comp(id:u32)->bool;
         pub fn call_event(id:u32, event:*const extern fn (this:*mut CEntity, args:*const c_void),args:*const c_void);
     }
     pub unsafe fn tmp_alloc(size:usize)->*mut c_void{
@@ -293,7 +300,7 @@ pub  fn get_transform_comp<'a>(id:&'a u32)->Option<&'a mut TransformComp>{
 }
 pub fn remove_transform_comp(id:u32)->bool{
     unsafe{
-        c_funcs::remove_mesh_comp(id)
+        c_funcs::remove_model_comp(id)
     }
 }
 
@@ -318,14 +325,14 @@ pub fn remove_physics_comp(id:u32)->bool{
     }
 }
 
-pub fn set_mesh_comp(id:u32,mesh:MeshComp)->bool{
+pub fn set_model_comp(id:u32,model:ModelComp)->bool{
     unsafe {
-        c_funcs::set_mesh_comp(id, mesh)
+        c_funcs::set_model_comp(id, model)
     }
 }
-pub fn get_mesh_comp<'a>(id:&'a u32)->Option<&'a mut MeshComp>{
+pub fn get_model_comp<'a>(id:&'a u32)->Option<&'a mut ModelComp>{
     unsafe{
-        let out= c_funcs::get_mesh_comp(*id);
+        let out= c_funcs::get_model_comp(*id);
         if out.is_null(){
             None
         } else{
@@ -333,9 +340,9 @@ pub fn get_mesh_comp<'a>(id:&'a u32)->Option<&'a mut MeshComp>{
         }
     } 
 }
-pub fn remove_mesh_comp(id:u32)->bool{
+pub fn remove_model_comp(id:u32)->bool{
     unsafe {
-        c_funcs::remove_mesh_comp(id)
+        c_funcs::remove_model_comp(id)
     }
 }
 
