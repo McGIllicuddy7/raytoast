@@ -99,6 +99,11 @@ ByteArray get_symbol_table_macho(ByteArray array){
 	}
 	return (ByteArray){};
 }
+
+ByteArray get_symbol_table_elf(ByteArray array){
+
+}
+
 SymbolTableInternal parse_symbol_table_internal(ByteArray file, ByteArray table){
 	ByteArray cmd = get_commands_macho(file);
 	SymbolTableInternal out;
