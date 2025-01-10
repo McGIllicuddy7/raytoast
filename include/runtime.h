@@ -96,10 +96,10 @@ void add_force(u32 id, Vector3 force);
 
 void call_event(u32 id, void (*func)(void* self, void * args), void * args);
 
-u32 load_shader(const char * vertex_path, const char *frag_path, const char * alias);
+u32 load_shader(const char * vertex_path, const char *frag_path);
 void unload_shader(u32 id);
 
-u32 load_model(const char * path, const char * alias);
+u32 load_model(const char * path);
 void unload_model(u32 id);
 
 u32 load_sound();
