@@ -1,6 +1,6 @@
 #pragma once
 #include <raylib.h>
-#include "../utils.h"
+#include "utils.h"
 enable_option_type(u32);
 typedef struct{
     Transform transform;

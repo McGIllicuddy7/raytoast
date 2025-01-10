@@ -1,8 +1,8 @@
 #define CTILS_IMPLEMENTATION
-#define ARENA_REGISTER
 #include "utils.h"
 #include "cereal.h"
 #include "serialize_intro.h"
+
 typedef struct {
     char * name;
     int ac;
