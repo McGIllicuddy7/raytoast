@@ -1,4 +1,4 @@
-#include "../runtime.h"
+#include "runtime.h"
 #include "default_components.h"
 #include <raymath.h>
 bool set_transform_comp(u32 id, TransformComp trans){
@@ -44,10 +44,27 @@ u32 get_root(u32 base){
     return base;
 }
 void attach_to(u32 entity, u32 parent){
-    
+   TransformComp * trans = get_transform_comp(entity);
+   TransformComp * par = get_transform_comp(parent);
+   v_append(par->children, entity);
+   trans->parent = (Optionu32)Some(parent);
 }
 void detach(u32 entity){
-
+    TransformComp * trans = get_transform_comp(entity); 
+    if(trans->parent.is_valid){
+        TransformComp * par = get_transform_comp(trans->parent.value);
+        int idx =-1;
+        for(int i =0; i<par->children.length; i++){
+            if(par->children.items[i] == entity){
+                idx = i;
+                break;
+            }
+        }
+        if(idx != -1){
+            v_remove(par->children, idx);
+        }
+    }
+    trans->parent = (Optionu32){};
 }
 
 bool set_physics_comp(u32 id, PhysicsComp phys){

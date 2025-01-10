@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include "utils.h"
 #include <raylib.h>
-#include "runtime/default_components.h"
+#include "default_components.h"
 #include "resource.h"
 #include <pthread.h>
 #define true 1 
@@ -96,11 +96,13 @@ void add_force(u32 id, Vector3 force);
 
 void call_event(u32 id, void (*func)(void* self, void * args), void * args);
 
-u32 load_shader(const char * vertex_path, const char *frag_path);
+u32 load_shader(const char * vertex_path, const char *frag_path, const char * alias);
 void unload_shader(u32 id);
 
-u32 load_model(const char * path);
+u32 load_model(const char * path, const char * alias);
 void unload_model(u32 id);
+
+u32 load_sound();
 void unload_level();
 
 Vector3 get_location(u32 id);

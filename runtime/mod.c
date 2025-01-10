@@ -1,6 +1,6 @@
 #include <raylib.h>
 #define RUNTIME_MOD
-#include "../runtime.h"
+#include "runtime.h"
 #include <raymath.h>
 #include <rlgl.h>
 #define true 1
@@ -119,22 +119,15 @@ void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
                 if(!trans){
                     continue;
                 }
-                //Matrix loc = MatrixTranslate(trans->transform.translation.x, 
-               // trans->transform.translation.y, trans->transform.translation.z);
-                Matrix rot = QuaternionToMatrix(trans->transform.rotation);
-                Matrix scale = MatrixScale(trans->transform.scale.x, trans->transform.scale.y, trans->transform.scale.z);
+                Matrix rot = QuaternionToMatrix(get_rotation(i));
+                Vector3 sc = get_scale(i);
+                Matrix scale = MatrixScale(sc.x, sc.y, sc.z);
                 Matrix transform = MatrixMultiply(rot,scale);
                 msh.value.transform = transform;
                 Material old = msh.value.materials[0];
                 msh.value.materials[0] = mat;
-                DrawModel(msh.value,trans->transform.translation, 1.0,WHITE);
+                DrawModel(msh.value,get_location(i), 1.0,WHITE);
                 msh.value.materials[0] = old;
-                if(get_physics_comp(i)){
-                    BoundingBox bx = get_physics_comp(i)->box;
-                    bx.max = Vector3Add(bx.max, get_location(i));
-                    bx.min = Vector3Add(bx.min, get_location(i));
-                    DrawBoundingBox(bx, GREEN);
-                }
             }
         }
         EndMode3D();
@@ -299,6 +292,7 @@ u32 load_model(const char * path){
         return out;
     }
 }
+
 void unload_model(u32 id){
      if(!RT.models.values.items[id].is_valid){
         return;
