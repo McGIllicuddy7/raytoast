@@ -61,13 +61,13 @@ Character make_character(const char * name, const char ** items){
 }
 void generate(){
     Character c = make_character("harry seldon", (const char *[]){"sword", "leather armor","potion of greater healing",0});
-    ByteVec vc = serialize_intro(0, &c, serialize_Character, sizeof(c));
+    ByteVec vc = serialize_object(0, &c, serialize_Character, sizeof(c));
     write_bytes_to_file(vc,"harry.bin");
 }
 void read_file(){
     ByteVec v = read_file_to_bytes(0, "harry.bin");
     Character *c2;
-    deserialize_intro(0, &c2, v.items);
+    deserialize_object(0, &c2, v.items);
     printf("%s\n", c2->name);
     printf("ac: %d ", c2->ac);
     printf("hp: %d\n", c2->hp);

@@ -194,12 +194,13 @@ pub mod c_funcs{
     #[repr(C)]
     #[derive(Clone, Copy)]
     pub struct Arena{
-        lock:libc::pthread_mutex_t, 
-        buffer:*const i8, 
-        next_ptr:*const i8, 
-        end:*const i8, 
-        previous_allocation: *const i8, 
-        next:*mut Arena, 
+        pub lock:libc::pthread_mutex_t, 
+        pub buffer:*const i8, 
+        pub next_ptr:*const i8, 
+        pub end:*const i8, 
+        pub previous_allocation: *const i8, 
+        pub next:*mut Arena, 
+        pub defer_que:*mut c_void,
     }
     extern "C"{
         static temporary_allocator:Arena;
