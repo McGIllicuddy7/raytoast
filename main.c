@@ -11,9 +11,6 @@ typedef struct{
 }TestEntity;
 void TestEntity_on_tick(TestEntity * self, float delta_time);
 EntityVTable TestEntityVTable = {.destructor  = default_on_destroy, .on_render = default_on_render, .on_tick = (void*)TestEntity_on_tick, .on_setup = default_on_setup};
-static u32 red;
-static u32 white;
-static u32 green;
 extern char * hello_from_rust(int f);
 extern Entity * create_test_rust_entity();
 float random_float(){
@@ -41,11 +38,6 @@ void TestEntity_on_tick(TestEntity * self, float delta_time){
     if(!cmp){
         return;
     }
-    if(cmp->collided_this_frame){
-        get_model_comp(id)->shader_id = green;
-    } else{
-        get_model_comp(id)->shader_id = red; 
-    }
     cmp->collided_this_frame = false;
     Vector3 location = get_transform_comp(id)->transform.translation;
     //printf("%f\n", Vector3Length(cmp->velocity));
@@ -55,7 +47,7 @@ void TestEntity_on_tick(TestEntity * self, float delta_time){
         add_force(id,Vector3Scale(Vector3Normalize(get_location(id)), -delta_time));
     }
 }
-u32 create_wall(Vector3 location, Vector3 scale, u32 mesh_id, u32 shader_id){
+u32 create_wall(Vector3 location, Vector3 scale, u32 mesh_id,Color tin){
     TestEntity * floor = malloc(sizeof(TestEntity));
     memcpy(floor->bytes, "012345678910", 13);
     floor->entity.vtable = &TestEntityVTable;
@@ -77,7 +69,11 @@ u32 create_wall(Vector3 location, Vector3 scale, u32 mesh_id, u32 shader_id){
     set_transform_comp(id, trans);
     ModelComp msh = {};
     msh.model_id =mesh_id;
-    msh.shader_id=shader_id;
+    msh.shader_id=0;
+    msh.tint = tin;
+    msh.diffuse_texture_id = -1;
+    msh.normal_texture_id = -1;
+    msh.roughness_texture_id = -1;
     set_model_comp(id, msh);
     set_physics_comp(id, phys);
     return id;
@@ -89,12 +85,13 @@ void setup(){
     u32 cube_id = create_model(LoadModelFromMesh(GenMeshCube(1.0, 1.0, 1.0)));
     u32 model_id = load_model("sphere.obj");
     ModelComp msh = {};
-    msh.model_id = model_id;
-    green= create_shader(LoadShader("shaders/base.vs", "shaders/green.fs"));
-    red = create_shader(LoadShader("shaders/base.vs", "shaders/red.fs"));
-    white = create_shader(LoadShader("shaders/base.vs", "shaders/white.fs"));
-    msh.shader_id = green;
-    int max = 200;
+    msh.model_id = cube_id;
+    msh.shader_id = load_shader("shaders/base.vs", "shaders/bsdf.fs");
+    msh.tint = GREEN;
+    msh.diffuse_texture_id= -1;
+    msh.normal_texture_id = -1;
+    msh.roughness_texture_id = -1;
+    int max = 100;
     int movable_amnt = 1;
     int xc = 0;
     int yc = 0;
@@ -109,23 +106,19 @@ void setup(){
         entity->entity.self_id = id;
         Transform transform;
         transform.translation = (Vector3){5*xc-25, 5*yc-25, 20};
-        transform.translation = Vector3Scale(transform.translation, 1.0);
         float theta = random_float()*2*PI;
         float phi = random_float()*2*PI;
         float radius = sqrt(random_float())*60+5;
         float scale = 1.0;
         transform.translation = vec_from_sphere(radius, phi, theta);
         //transform.translation.z = fabs(transform.translation.z)+5.0;
-        transform.scale = (Vector3){0.05, 0.05, 0.05};
-        msh.shader_id = red;
-        msh.model_id = cube_id;
         transform.scale = (Vector3){scale, scale, scale};
         transform.rotation = (Quaternion){0.0, 0.0, 0.0, 1.0};
         TransformComp trans ={};
         trans.transform = transform;
         trans.parent.is_valid = false;
         PhysicsComp phys = {};
-        phys.movable = i%movable_amnt ==0;
+        phys.movable = i%movable_amnt == 0;
         phys.box.max = (Vector3){0.5, 0.5, 0.5};
         phys.box.min = (Vector3){-0.5, -0.5, -0.5};
         phys.box.max = Vector3Scale(phys.box.max, scale);
@@ -135,11 +128,12 @@ void setup(){
         set_transform_comp(id, trans);
         set_model_comp(id, msh);
         set_physics_comp(id, phys);
-        get_camera()->position = (Vector3){-20,0,0};
     }
-   create_wall((Vector3){}, (Vector3){10,10,1}, cube_id, white);
-   attach_camera_to(0, transform_default());
-   get_transform_comp(0)->transform.rotation =  quat_from_vector(Vector3Normalize(Vector3Negate( get_transform_comp(0)->transform.translation)));
+    get_camera()->position = (Vector3){-20,0,0};
+    create_wall((Vector3){}, (Vector3){10,10,1}, cube_id,RED);
+    create_light((Vector3){0, 0, 8.0}, WHITE, 1.0, 10.0);
+   //attach_camera_to(0, transform_default());
+   //get_transform_comp(0)->transform.rotation =  quat_from_vector(Vector3Normalize(Vector3Negate( get_transform_comp(0)->transform.translation)));
 }
 void on_tick(){
     static u128 frame_count = 0;

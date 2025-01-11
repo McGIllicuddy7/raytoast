@@ -39,22 +39,28 @@ typedef Entity * EntityRef;
 enable_vec_type(EntityRef);
 enable_option_type(Model);
 enable_option_type(Shader);
+enable_option_type(Texture);
 enable_vec_type(OptionShader);
 enable_vec_type(Model);
 enable_vec_type(OptionModel);
+enable_vec_type(OptionTexture);
 enable_resource_type(Model);
 enable_resource_type(Shader);
-
+enable_resource_type(Texture);
 enable_hash_type(String, u32);
 typedef struct {
     EntityRefVec entities;
     ResourceModel models;
     ResourceShader shaders; 
+    ResourceTexture textures;
     OptionTransformCompVec transform_comps;
     OptionPhysicsCompVec physics_comps;
     OptionModelCompVec model_comps;
+    OptionCharacterCompVec character_comps;
+    OptionLightCompVec light_comps;
     Stringu32HashTable* loaded_models;
     Stringu32HashTable* loaded_shaders;
+    Stringu32HashTable* loaded_textures;
     Camera3D camera;
     Optionu32 camera_parent;
     Transform camera_relative_transform;
@@ -72,21 +78,15 @@ Optionu32 create_entity(Entity * ent);
 bool destroy_entity(u32 id);
 Entity * get_entity(u32 id);
 
-bool set_transform_comp(u32 id, TransformComp trans);
-TransformComp * get_transform_comp(u32 id);
-bool remove_transform_comp(u32 id);
 
-bool set_physics_comp(u32 id, PhysicsComp phys);
-PhysicsComp * get_physics_comp(u32 id);
-bool remove_physics_comp(u32 id);
-
-bool set_model_comp(u32 id, ModelComp model);
-ModelComp * get_model_comp(u32 id);
-bool remove_model_comp(u32 id);
 
 u32 create_shader(Shader shader);
 OptionShader get_shader(u32 id);
 bool remove_shader(u32 id);
+
+u32 create_texture(Texture texture);
+OptionTexture get_texture(u32 id);
+bool remove_texture(u32 id);
 
 u32 create_model(Model model);
 OptionModel get_model(u32 id);
@@ -103,7 +103,10 @@ u32 load_model(const char * path);
 String* get_model_name(u32 id);
 void unload_model(u32 id);
 
-u32 load_sound();
+u32 load_texture(const char * path);
+String* get_texture_name(u32 id);
+void unload_texture(u32 id);
+
 void unload_level();
 
 Vector3 get_location(u32 id);
@@ -118,5 +121,6 @@ Camera3D * get_camera();
 void attach_camera_to(u32 id, Transform relative_trans);
 void detach_camera();
 Transform transform_default();
-
 Quaternion quat_from_vector(Vector3 location);
+void load_level(const char * path);
+void save_level(const char * path);

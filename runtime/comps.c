@@ -8,6 +8,9 @@ bool set_transform_comp(u32 id, TransformComp trans){
     if(!RT.entities.items[id]){
         return false;
     }
+    if(RT.transform_comps.items[id].is_valid){
+        unmake(RT.transform_comps.items[id].value.children);
+    }
     RT.transform_comps.items[id] = (OptionTransformComp)Some(trans);
     return true;
 }
@@ -30,6 +33,7 @@ bool remove_transform_comp(u32 id){
     if(!RT.entities.items[id]){
         return false;
     }
+    if(RT.transform_comps.items[id].is_valid) unmake(RT.transform_comps.items[id].value.children);
     RT.transform_comps.items[id] = (OptionTransformComp)None;
     return true;
 }
@@ -217,4 +221,99 @@ Quaternion quat_from_vector(Vector3 loc){
     float phi = asin(loc.z);
     float theta = atan2(loc.y, loc.x);
     return QuaternionFromEuler(0, -phi,theta);
+}
+
+bool set_character_comp(u32 id, CharacterComp character_comp){
+    if(id>RT.entities.length){
+        return false;
+    }
+    if(!RT.entities.items[id]){
+        return false;
+    }
+    RT.character_comps.items[id] = (OptionCharacterComp)Some(character_comp); 
+    return true; 
+}
+
+CharacterComp * get_character_comp(u32 id){
+    if(id>RT.entities.length){
+        return 0;
+    }
+    if(!RT.entities.items[id]){
+        return 0;
+    }
+    if(RT.character_comps.items[id].is_valid){
+       return &RT.character_comps.items[id].value;
+    }
+    return 0;
+}
+
+bool remove_character_comp(u32 id){
+    if(id>RT.entities.length){
+        return false;
+    }
+    if(!RT.entities.items[id]){
+        return false;
+    }
+    RT.character_comps.items[id] = (OptionCharacterComp)None;
+    return true;
+}
+
+bool set_light_comp(u32 id, LightComp light){
+    if(id>RT.entities.length){
+        return false;
+    }
+    if(!RT.entities.items[id]){
+        return false;
+    }
+    RT.light_comps.items[id] = (OptionLightComp)Some(light); 
+    return true; 
+}
+
+LightComp* get_light_comp(u32 id){
+    if(id>RT.entities.length){
+        return 0;
+    }
+    if(!RT.entities.items[id]){
+        return 0;
+    }
+    if(RT.light_comps.items[id].is_valid){
+       return &RT.light_comps.items[id].value;
+    }
+    return 0;
+}
+
+bool remove_light_comp(u32 id){
+    if(id>RT.entities.length){
+        return false;
+    }
+    if(!RT.entities.items[id]){
+        return false;
+    }
+    RT.light_comps.items[id] = (OptionLightComp)None;
+    return true;  
+}
+
+u32 create_light(Vector3 location, Color color, float brightness, float radius){
+    Entity * ent = malloc(sizeof(Entity));
+    ent->vtable = &entity_default_vtable;
+    u32 id = create_entity(ent).value;
+    LightComp cmp;
+    cmp.brightness = brightness;
+    cmp.color = color;
+    cmp.influence_radius = radius;
+    TransformComp trans = {};
+    trans.transform = transform_default();
+    trans.transform.translation = location;
+    trans.transform.rotation = QuaternionFromEuler(-PI/2.0, 0.0, 0.0);
+    set_transform_comp(id, trans);
+    set_light_comp(id,cmp);
+    ModelComp msh = {};
+    msh.diffuse_texture_id =-1;
+    msh.roughness_texture_id = -1;
+    msh.normal_texture_id = -1;
+    msh.shader_id = load_shader("shaders/base.vs", "shaders/bsdf.fs");
+    msh.model_id = load_model("lightbulb.glb");
+    msh.diffuse_texture_id = load_texture("lightbolb.png");
+    set_model_comp(id, msh);
+    return id;
 }

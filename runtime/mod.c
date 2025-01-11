@@ -33,6 +33,8 @@ static void runtime_reserve(){
         v_append(RT.model_comps,(OptionModelComp) {});
         v_append(RT.transform_comps,(OptionTransformComp){});
         v_append(RT.physics_comps,(OptionPhysicsComp) {});
+        v_append(RT.light_comps, (OptionLightComp){});
+        v_append(RT.character_comps, (OptionCharacterComp){});
     }
 }
 static void process_events(){
@@ -45,7 +47,33 @@ static void process_events(){
         current = current->next;
     }
 }
+static void lighting_call(Shader s,int light_count, Vector3 locations[], Vector4 colors[]){
+    SetShaderValueV(s, GetShaderLocation(s,"light_positions"), locations, RL_SHADER_UNIFORM_VEC3, light_count);     
+    SetShaderValueV(s, GetShaderLocation(s,"light_colors"), colors, RL_SHADER_UNIFORM_VEC4, light_count);  
+    SetShaderValue(s, GetShaderLocation(s,"light_count"), &light_count, RL_SHADER_UNIFORM_INT);
+}
 
+static void run_lighting(Shader s,Vector3 location){
+    const int size = 100;
+    Vector3 positions[size] = {};
+    Vector4 colors[size] = {};
+    int count =0;
+    for(int i= 0; i<RT.light_comps.length; i++){
+        if(RT.light_comps.items[i].is_valid){
+            if(Vector3Distance(location, get_location(i))<RT.light_comps.items[i].value.influence_radius){
+                if(count<size){
+                    positions[count] = get_location(i);
+                    Color t = RT.light_comps.items[i].value.color;
+                    float brightness = RT.light_comps.items[i].value.brightness; 
+                    colors[count] =(Vector4){t.r, t.g, t.b, t.a};
+                    colors[count] = (Vector4){colors[count].x/255.0*brightness, colors[count].y/255.0*brightness, colors[count].z/255.0*brightness, colors[count].w/255.0*brightness};
+                    count ++;
+                }
+            }
+        }
+    }
+    lighting_call(s, count, positions, colors);
+}
 void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
     tmp_reset();
     RT.entities = (EntityRefVec)make(0, EntityRef);
@@ -54,8 +82,12 @@ void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
     RT.model_comps =(OptionModelCompVec)make(0, OptionModelComp);
     RT.transform_comps =(OptionTransformCompVec)make(0, OptionTransformComp);
     RT.physics_comps =(OptionPhysicsCompVec)make(0, OptionPhysicsComp);
+    RT.light_comps = (OptionLightCompVec)make(0, OptionLightComp);
+    RT.character_comps = make(0, OptionCharacterComp);
     RT.loaded_models = Stringu32HashTable_create(1000, hash_string, string_equals);
     RT.loaded_shaders = Stringu32HashTable_create(1000, hash_string, string_equals); 
+    RT.textures = ResourceTexture_make(UnloadTexture);
+    RT.loaded_textures = Stringu32HashTable_create(1000, hash_string, string_equals);
     for(int i =0; i<10; i++){
         runtime_reserve();
     }
@@ -104,13 +136,40 @@ void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
                 continue;
             }
             if (RT.model_comps.items[i].is_valid){
+                ModelComp cmp =RT.model_comps.items[i].value; 
                 OptionShader shade = get_shader(RT.model_comps.items[i].value.shader_id);
-           
                 assert(shade.is_valid);
                 if(!shade.is_valid){
                     continue;
                 }
-                mat.shader = shade.value;
+                Shader s = shade.value;
+            run_lighting(s, get_location(i));
+                int use_diffuse = cmp.diffuse_texture_id>=0;
+                int use_normals = cmp.normal_texture_id>=0;
+                int use_roughness = cmp.roughness_texture_id>=0;
+                SetShaderValue(s, GetShaderLocation(s, "use_diffuse"), &use_diffuse, RL_SHADER_UNIFORM_INT);
+                SetShaderValue(s, GetShaderLocation(s, "use_normals"), &use_normals, RL_SHADER_UNIFORM_INT);
+                SetShaderValue(s, GetShaderLocation(s, "use_roughness"), &use_normals, RL_SHADER_UNIFORM_INT);
+                if(!use_diffuse){
+                    float color[4]= {cmp.tint.r, cmp.tint.g, cmp.tint.b, cmp.tint.a};
+                    color[0] /= 255.0;
+                    color[1] /= 255.0;
+                    color[2] /= 255.0;
+                    color[3]/= 255.0;
+                    SetShaderValue(s, GetShaderLocation(s,"diffuse_tint"), &color, RL_SHADER_UNIFORM_VEC4);
+                } else{
+                    SetShaderValueTexture(s, GetShaderLocation(s, "diffuse"), get_texture(cmp.diffuse_texture_id).value);
+                }
+                if(use_normals){
+                  SetShaderValueTexture(s, GetShaderLocation(s, "normal"), get_texture(cmp.normal_texture_id).value);
+                }
+                if(!use_roughness){
+                    float roughness = cmp.roughness;
+                     SetShaderValue(s, GetShaderLocation(s,"colDiffuse"), &roughness, RL_SHADER_UNIFORM_FLOAT);
+                } else{
+                    SetShaderValueTexture(s, GetShaderLocation(s, "roughness"), get_texture(cmp.roughness_texture_id).value);
+                }
+                mat.shader = s;
                 OptionModel msh = get_model(RT.model_comps.items[i].value.model_id);
                  if(!msh.is_valid){
                     continue;
@@ -123,6 +182,8 @@ void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
                 Vector3 sc = get_scale(i);
                 Matrix scale = MatrixScale(sc.x, sc.y, sc.z);
                 Matrix transform = MatrixMultiply(rot,scale);
+                Matrix mt = MatrixMultiply(MatrixTranslate(get_location(i).x ,get_location(i).y, get_location(i).z), transform);
+                SetShaderValueMatrix(s, GetShaderLocation(s, "matModel"), mt);
                 msh.value.transform = transform;
                 Material old = msh.value.materials[0];
                 msh.value.materials[0] = mat;
