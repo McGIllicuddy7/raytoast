@@ -71,9 +71,6 @@ u32 create_wall(Vector3 location, Vector3 scale, u32 mesh_id,Color tin){
     msh.model_id =mesh_id;
     msh.shader_id=0;
     msh.tint = tin;
-    msh.diffuse_texture_id = -1;
-    msh.normal_texture_id = -1;
-    msh.roughness_texture_id = -1;
     set_model_comp(id, msh);
     set_physics_comp(id, phys);
     return id;
@@ -88,9 +85,6 @@ void setup(){
     msh.model_id = cube_id;
     msh.shader_id = load_shader("shaders/base.vs", "shaders/bsdf.fs");
     msh.tint = GREEN;
-    msh.diffuse_texture_id= -1;
-    msh.normal_texture_id = -1;
-    msh.roughness_texture_id = -1;
     int max = 100;
     int movable_amnt = 1;
     int xc = 0;

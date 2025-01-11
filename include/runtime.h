@@ -58,6 +58,9 @@ typedef struct {
     OptionModelCompVec model_comps;
     OptionCharacterCompVec character_comps;
     OptionLightCompVec light_comps;
+    Vector3 directional_light_direction;
+    Color directional_light_color;
+    Color ambient_color;
     Stringu32HashTable* loaded_models;
     Stringu32HashTable* loaded_shaders;
     Stringu32HashTable* loaded_textures;
@@ -120,6 +123,11 @@ Vector3 get_right_vector(u32 id);
 Camera3D * get_camera();
 void attach_camera_to(u32 id, Transform relative_trans);
 void detach_camera();
+
+Vector3 * get_light_direction();
+Color* get_light_color();
+Color * get_ambient_color();
+
 Transform transform_default();
 Quaternion quat_from_vector(Vector3 location);
 void load_level(const char * path);

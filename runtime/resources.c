@@ -108,14 +108,14 @@ u32 create_shader(Shader shader){
     return ResourceShader_create(&RT.shaders, shader);
 }
 u32 create_texture(Texture texture){
-   return ResourceTexture_create(&RT.textures, texture); 
+   return ResourceTexture_create(&RT.textures, texture)+1; 
 }
 bool remove_texture(u32 id){
-    ResourceTexture_destroy(&RT.textures, id);
+    ResourceTexture_destroy(&RT.textures, id-1);
     return true;
 }
 bool remove_shader(u32 id){
-    ResourceShader_destroy(&RT.shaders, id);
+    ResourceShader_destroy(&RT.shaders, id-1);
     return true;
 }
 
@@ -136,7 +136,7 @@ u32 load_texture(const char * path){
     }  else{
         Texture text = LoadTexture(path);
         u32 out = create_texture(text);
-        Stringu32HashTable_insert(RT.loaded_models,name, out );
+        Stringu32HashTable_insert(RT.loaded_models,name, out);
         return out;
     } 
 }
@@ -151,11 +151,11 @@ String* get_texture_name(u32 id){
     return 0;
 }
 void unload_texture(u32 id){
-    if(!RT.textures.values.items[id].is_valid){
+    if(!RT.textures.values.items[id-1].is_valid){
         return;
     }
-    UnloadTexture(RT.textures.values.items[id].value);
-    RT.textures.values.items[id] = (OptionTexture){};
+    UnloadTexture(RT.textures.values.items[id-1].value);
+    RT.textures.values.items[id-1] = (OptionTexture){};
     for(int i =0; i<RT.loaded_textures->TableSize; i++){
         Stringu32KeyValuePairVec * v = &RT.loaded_textures->Table[i];
         for(int j =0; j<v->length; j++){

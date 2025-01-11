@@ -308,11 +308,10 @@ u32 create_light(Vector3 location, Color color, float brightness, float radius){
     set_transform_comp(id, trans);
     set_light_comp(id,cmp);
     ModelComp msh = {};
-    msh.diffuse_texture_id =-1;
-    msh.roughness_texture_id = -1;
-    msh.normal_texture_id = -1;
     msh.shader_id = load_shader("shaders/base.vs", "shaders/bsdf.fs");
     msh.model_id = load_model("lightbulb.glb");
+    msh.emmisive_texture_id = 0;
+    msh.emmision = WHITE;
     msh.diffuse_texture_id = load_texture("lightbolb.png");
     set_model_comp(id, msh);
     return id;
