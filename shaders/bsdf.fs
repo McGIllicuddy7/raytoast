@@ -69,18 +69,18 @@ vec4 reflected(vec4 dif, vec4 col){
     float g = dif.g;
     float b = dif.b;
     float a = dif.a;
-    float thresh = 0.02;
-    if(r<thresh){
-        r = thresh;
+    float thresh = 0.01;
+    if(r<thresh*col.r){
+        r = thresh*col.r;
     }
-    if(g<thresh){
-        g = thresh;
+    if(g<thresh*col.g){
+        g = thresh*col.g;
     }
-    if(b<thresh){
-        b = thresh;
+    if(b<thresh*col.b){
+        b = thresh*col.b;
     }
-    if(a<thresh){
-        a = thresh;
+    if(a<thresh*col.a){
+        a = thresh*col.a;
     }
     return vec4(r*col.r, g*col.g, b*col.b, a*col.a);
 }
@@ -94,15 +94,18 @@ float shade(vec3 direction){
         norm += smp.g*tangent;
         norm += smp.r* cross(norm_old, tangent);
     }
-    return dot(norm, direction);
+    float ot = dot(norm, direction);
+    if(ot<0.0){
+        ot = 0.0;
+    }
+    return ot;
 }
 vec4 calc_lighting(vec3 light_pos, vec4 light_color, vec4 col){
     vec3 delt= light_pos-position;
     float dist = delt.x*delt.x+delt.y*delt.y+delt.z*delt.z;
-
     float delta = shade(normalize(delt));
     delta /= sqrt(dist/10.0);
-    return delta*reflected(light_color, col);
+    return delta*reflected(col, light_color);
 }
 
 

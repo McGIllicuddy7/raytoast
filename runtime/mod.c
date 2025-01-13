@@ -95,7 +95,7 @@ void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
     RT.loaded_shaders = Stringu32HashTable_create(1000, hash_string, string_equals); 
     RT.textures = ResourceTexture_make(UnloadTexture);
     RT.loaded_textures = Stringu32HashTable_create(1000, hash_string, string_equals);
-    RT.ambient_color = (Color){64, 32, 27, 255};
+    RT.ambient_color = (Color){64, 64, 64,128};
     RT.directional_light_color = (Color){128, 64, 58, 255};
     RT.directional_light_direction = (Vector3){0,0,-1};
     for(int i =0; i<10; i++){
@@ -219,11 +219,11 @@ void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
         BeginDrawing();
         float height = GetScreenHeight();
         float width = GetScreenWidth();
-        SetShaderValue(default_post_process, GetShaderLocation(default_post_process, "height"), &height, RL_SHADER_UNIFORM_FLOAT);
-        SetShaderValue(default_post_process, GetShaderLocation(default_post_process, "width"), &height, RL_SHADER_UNIFORM_FLOAT);
-        BeginShaderMode(default_post_process);
+        //SetShaderValue(default_post_process, GetShaderLocation(default_post_process, "height"), &height, RL_SHADER_UNIFORM_FLOAT);
+        //SetShaderValue(default_post_process, GetShaderLocation(default_post_process, "width"), &height, RL_SHADER_UNIFORM_FLOAT);
+        //BeginShaderMode(default_post_process);
         DrawTextureRec(RT.target.texture, (Rectangle){ 0, 0, (float)RT.target.texture.width, (float)-RT.target.texture.height }, (Vector2){ 0, 0 }, WHITE);
-        EndShaderMode();
+        //EndShaderMode();
         on_render();
         EndDrawing();
         finish_physics();
@@ -237,6 +237,9 @@ void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
 static void free_string(String *s){
     arena_free(s->arena, s->items);
 }
+static void free_transform(OptionTransformComp t){
+    unmake(t.value.children);
+}
 void unload_level(){
     for(int i =0; i<RT.entities.length; i++){
         if(RT.entities.items[i]){
@@ -247,11 +250,15 @@ void unload_level(){
     unmake(RT.entities);
     ResourceModel_unmake(&RT.models);
     ResourceShader_unmake(&RT.shaders);
-    unmake(RT.transform_comps);
+    ResourceTexture_unmake(&RT.textures);
+    unmake_fn(RT.transform_comps, free_transform);
     unmake(RT.physics_comps);
     unmake(RT.model_comps);
+    unmake(RT.character_comps);
+    unmake(RT.light_comps);
     Stringu32HashTable_unmake_funcs(RT.loaded_models, free_string, 0);
     Stringu32HashTable_unmake_funcs(RT.loaded_shaders, free_string, 0);
+   Stringu32HashTable_unmake_funcs(RT.loaded_textures, free_string, 0); 
     UnloadRenderTexture(RT.target);
     EventNode* queue = RT.event_queue;
     tmp_reset();
