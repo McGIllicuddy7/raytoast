@@ -421,15 +421,16 @@ impl<const HEIGHT: usize, const WIDTH: usize, T: Numeric> Mul<T> for Matrix<HEIG
     return out;
 }*/
 //A width == B height
-impl<const HEIGHT: usize, const WIDTH: usize, T: Numeric, const OTHER: usize>
-    Mul<Matrix<WIDTH, OTHER, T>> for Matrix<HEIGHT, WIDTH, T>
+impl<const HEIGHT: usize, const WIDTH: usize, T: Numeric, const OTHER_WIDTH: usize, const OTHER_HEIGHT:usize>
+    Mul<Matrix<OTHER_HEIGHT, OTHER_WIDTH, T>> for Matrix<HEIGHT, WIDTH, T>
 {
     type Output = Matrix<HEIGHT, HEIGHT, T>;
 
-    fn mul(self, rhs: Matrix<WIDTH, OTHER, T>) -> Self::Output {
+    fn mul(self, rhs: Matrix<OTHER_HEIGHT, OTHER_WIDTH, T>) -> Self::Output {
+        assert_eq!(WIDTH, OTHER_HEIGHT);
         let mut out: Matrix<HEIGHT, HEIGHT, T> = Matrix::zero();
         for i in 0..HEIGHT {
-            for j in 0..OTHER {
+            for j in 0..OTHER_WIDTH {
                 for k in 0..HEIGHT{
                     out.values[i][j] += self.values[i][k].clone() * rhs.values[k][j].clone();
                 }
@@ -438,6 +439,7 @@ impl<const HEIGHT: usize, const WIDTH: usize, T: Numeric, const OTHER: usize>
         out
     }
 }
+
 impl<const HEIGHT: usize, const WIDTH: usize, T: Numeric, U: Into<T> + Clone>
     From<[[U; WIDTH]; HEIGHT]> for Matrix<HEIGHT, WIDTH, T>
 {
@@ -519,8 +521,11 @@ impl <const HEIGHT:usize,const WIDTH:usize, T:Numeric >std::ops::IndexMut<usize>
         &mut self.values[index]
     }
 } 
+
+
+
 #[test]
-fn test() {
+fn test1() {
     let _a: Matrix<3> = Matrix::identity() * 2.0;
     let b: Matrix<3> = [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]].into();
     println!("{:#?}", b * b);

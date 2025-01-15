@@ -21,6 +21,8 @@
 /*
 	Initial Defines
 */
+#define STRINGIFY1(S) #S 
+#define STRINGIFY(S) STRINGIFY1(S)
 CTILS_STATIC
 void * debug_alloc(size_t count, size_t size);
 

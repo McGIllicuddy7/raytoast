@@ -239,7 +239,7 @@ static bool check_hit_array(u32 id, u32Vec cmps,Vector3 * normal,u32 * other_hit
         b2.min = Vector3Add(b2.min, trans.items[id1].value.transform.translation);
         bool hit = CheckCollisionBoxes(b1, b2);
         if(hit){
-            const Vector3 norm = box_collision_normal_vector(b1, b2, get_physics_comp(id)->velocity);
+            const Vector3 norm = box_collision_normal_vector(b1, b2, get_physics_comp((Ref){id, RT.generations.items[id]})->velocity);
             *normal=  norm;
             *other_hit = id1;
             return true;
@@ -307,12 +307,12 @@ static float max_allowed_distance_non_opt(u32 id){
 static VectorTuple calc_hit_impulses(u32 id1, u32 id2, Vector3 normal_vector,float drag){
     //va2 = (ma-mb)/(ma+mb)va1+(2mb)/(ma+mb)vb1
     //vb2 = (2ma)/(ma+mb)va1+(mb-ma)/(ma+mb)vb1
-    const Vector3 base_a1 = get_physics_comp(id1)->velocity;
-    const Vector3 base_b1= get_physics_comp(id2)->velocity;
-    const float va1 = Vector3DotProduct(get_physics_comp(id1)->velocity, normal_vector);
-    const float vb1 = Vector3DotProduct(get_physics_comp(id2)->velocity, normal_vector);
-    const float ma = get_physics_comp(id1)->mass;
-    const float mb = get_physics_comp(id2)->mass;
+    const Vector3 base_a1 = get_physics_comp((Ref){id1, RT.generations.items[id1]})->velocity;
+    const Vector3 base_b1= get_physics_comp((Ref){id2, RT.generations.items[id2]})->velocity;
+    const float va1 = Vector3DotProduct(get_physics_comp((Ref){id1, RT.generations.items[id1]})->velocity, normal_vector);
+    const float vb1 = Vector3DotProduct(get_physics_comp((Ref){id2, RT.generations.items[id2]})->velocity, normal_vector);
+    const float ma = get_physics_comp((Ref){id1, RT.generations.items[id1]})->mass;
+    const float mb = get_physics_comp((Ref){id1, RT.generations.items[id1]})->mass;
     const float va2 = ((ma-mb)/(ma+mb)*va1+(2*mb)/(ma+mb)*vb1)*drag; 
     const float vb2 = ((2*ma)/(ma+mb)*va1+(mb-ma)/(ma+mb)*vb1)*drag;
     const float dela = va2-va1;

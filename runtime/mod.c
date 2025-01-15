@@ -11,7 +11,7 @@ void finish_physics();
 void default_on_tick(void *f, f32 dt){
 
 }
-void default_on_setup(void*self ,u32 self_id){
+void default_on_setup(void*self ,Ref self_id){
     Entity * ent = self;
     ent->self_id = self_id;
 }
@@ -29,6 +29,7 @@ EntityVTable entity_default_vtable =
 Runtime RT = {};
 static void runtime_reserve(){
     for(int i =0; i<100; i++){
+        v_append(RT.generations, 0);
         v_append(RT.entities, 0);
         v_append(RT.model_comps,(OptionModelComp) {});
         v_append(RT.transform_comps,(OptionTransformComp){});
@@ -67,9 +68,9 @@ static void run_lighting(Shader s,Vector3 location){
     SetShaderValue(s, GetShaderLocation(s, "directional_light_color"), &dir,SHADER_UNIFORM_VEC4); 
     for(int i= 0; i<RT.light_comps.length; i++){
         if(RT.light_comps.items[i].is_valid){
-            if(Vector3Distance(location, get_location(i))<RT.light_comps.items[i].value.influence_radius){
+            if(Vector3Distance(location, get_location((Ref){i, RT.generations.items[i]}))<RT.light_comps.items[i].value.influence_radius){
                 if(count<size){
-                    positions[count] = get_location(i);
+                    positions[count] = get_location((Ref){i, RT.generations.items[i]});
                     Color t = RT.light_comps.items[i].value.color;
                     float brightness = RT.light_comps.items[i].value.brightness; 
                     colors[count] =(Vector4){t.r, t.g, t.b, t.a};
@@ -84,6 +85,7 @@ static void run_lighting(Shader s,Vector3 location){
 void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
     tmp_reset();
     RT.entities = (EntityRefVec)make(0, EntityRef);
+    RT.generations = make(0, u32);
     RT.models = ResourceModel_make(UnloadModel);
     RT.shaders = ResourceShader_make(UnloadShader);
     RT.model_comps =(OptionModelCompVec)make(0, OptionModelComp);
@@ -154,7 +156,8 @@ void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
                     continue;
                 }
                 Shader s = shade.value;
-                run_lighting(s, get_location(i));
+                Vector3 lc = get_location((Ref){i, RT.generations.items[i]});
+                run_lighting(s, lc);
                 int use_diffuse = cmp.diffuse_texture_id>0;
                 int use_normals = cmp.normal_texture_id>0;
                 int use_roughness = cmp.roughness_texture_id>0;
@@ -197,20 +200,20 @@ void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
                  if(!msh.is_valid){
                     continue;
                 } 
-                TransformComp * trans = get_transform_comp(i);
+                TransformComp * trans = get_transform_comp((Ref){i, RT.generations.items[i]});
                 if(!trans){
                     continue;
                 }
-                Matrix rot = QuaternionToMatrix(get_rotation(i));
-                Vector3 sc = get_scale(i);
+                Matrix rot = QuaternionToMatrix(get_rotation((Ref){i, RT.generations.items[i]}));
+                Vector3 sc = get_scale((Ref){i, RT.generations.items[i]});
                 Matrix scale = MatrixScale(sc.x, sc.y, sc.z);
                 Matrix transform = MatrixMultiply(rot,scale);
-                Matrix mt = MatrixMultiply(MatrixTranslate(get_location(i).x ,get_location(i).y, get_location(i).z), transform);
+                Matrix mt = MatrixMultiply(MatrixTranslate(get_location((Ref){i, RT.generations.items[i]}).x ,get_location((Ref){i, RT.generations.items[i]}).y, get_location((Ref){i,RT.generations.items[i]}).z), transform);
                 SetShaderValueMatrix(s, GetShaderLocation(s, "matModel"), mt);
                 msh.value.transform = transform;
                 Material old = msh.value.materials[0];
                 msh.value.materials[0] = mat;
-                DrawModel(msh.value,get_location(i), 1.0,WHITE);
+                DrawModel(msh.value,get_location((Ref){i, RT.generations.items[i]}), 1.0,WHITE);
                 msh.value.materials[0] = old;
             }
         }
@@ -263,34 +266,39 @@ void unload_level(){
     EventNode* queue = RT.event_queue;
     tmp_reset();
 }
-Optionu32 create_entity(Entity * ent){
+OptionRef create_entity(Entity * ent){
     for (int i=0; i<RT.entities.length; i++){
         if(!RT.entities.items[i]){
             RT.entities.items[i] = ent;
-            ent->vtable->on_setup(ent, i);
-            return (Optionu32)Some(i);
+            RT.generations.items[i]++;
+            Ref rt = {i, RT.generations.items[i]};
+            ent->vtable->on_setup(ent,rt);
+            return (OptionRef)Some(rt);
         }
     }
     RT.failed_to_create = true;
-    return (Optionu32)None;
+    return (OptionRef)None;
 }
-bool destroy_entity(u32 id){
-    if(id> RT.entities.length){
+bool destroy_entity(Ref id){
+    if(id.id> RT.entities.length){
         return false;
     } 
-    if(RT.entities.items[id]){
-        RT.entities.items[id]->vtable->destructor(RT.entities.items[id]); 
-        free(RT.entities.items[id]);
-        RT.entities.items[id] = 0; 
+    if(RT.entities.items[id.id]){
+        RT.entities.items[id.id]->vtable->destructor(RT.entities.items[id.id]); 
+        free(RT.entities.items[id.id]);
+        RT.entities.items[id.id] = 0; 
         return true;
     }
     return false;
 }
-Entity * get_entity(u32 id){
-    if(id> RT.entities.length){
+Entity * get_entity(Ref id){
+    if(id.id>= RT.entities.length){
         return 0;
     } 
-    return RT.entities.items[id];
+    if(id.gen_idx != RT.generations.items[id.id]){
+        return 0;
+    }
+    return RT.entities.items[id.id];
 }
 
 Camera3D * get_camera(){
@@ -308,7 +316,7 @@ Color* get_light_color(){
 Color * get_ambient_color(){
     return &RT.ambient_color;
 }
-void call_event(u32 id, void (*func)(void * self, void * args), void * args){
+void call_event(Ref id, void (*func)(void * self, void * args), void * args){
     EventNode * node = tmp_alloc(sizeof(EventNode));
     node->args = args;
     node->event = func;

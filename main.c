@@ -33,7 +33,7 @@ Vector3 vec_from_sphere(float radius, float phi, float theta){
     return (Vector3){cos(theta)*cos(phi)*radius, sin(theta)*cos(phi)*radius, sin(phi)*radius}; 
 }
 void TestEntity_on_tick(TestEntity * self, float delta_time){
-    u32 id = self->entity.self_id;
+    Ref id = self->entity.self_id;
     PhysicsComp*cmp = get_physics_comp(self->entity.self_id);
     if(!cmp){
         return;
@@ -47,11 +47,11 @@ void TestEntity_on_tick(TestEntity * self, float delta_time){
         add_force(id,Vector3Scale(Vector3Normalize(get_location(id)), -delta_time));
     }
 }
-u32 create_wall(Vector3 location, Vector3 scale, u32 mesh_id,Color tin){
+Ref create_wall(Vector3 location, Vector3 scale, u32 mesh_id,Color tin){
     TestEntity * floor = malloc(sizeof(TestEntity));
     memcpy(floor->bytes, "012345678910", 13);
     floor->entity.vtable = &TestEntityVTable;
-    u32 id = create_entity((void*)floor).value;
+    Ref id = create_entity((void*)floor).value;
     floor->entity.self_id = id;
     Transform transform;
     transform.rotation = (Quaternion){0,0,0,1};
@@ -96,7 +96,7 @@ void setup(){
         TestEntity * entity = malloc(sizeof(TestEntity));
         memcpy(entity->bytes, "012345678910", 13);
         entity->entity.vtable = &TestEntityVTable;
-        u32 id = create_entity((void*)entity).value;
+        Ref id = create_entity((void*)entity).value;
         entity->entity.self_id = id;
         Transform transform;
         transform.translation = (Vector3){5*xc-25, 5*yc-25, 20};
@@ -141,7 +141,7 @@ void on_render(){
     DrawFPS(1500, 100);
 }
 
-int main(void){
+int main(int argc, const char ** argv){
     //ProfilerStart("dump.txt");
     tmp_init();
     init_runtime(setup, on_tick, on_render);

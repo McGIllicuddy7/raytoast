@@ -2,6 +2,8 @@ use std::{ffi::c_void, mem::ManuallyDrop};
 
 pub use crate::math::*;
 use libc::memcpy;
+use crate::cvec::CVec;
+use crate::runtime::*;
 
 #[allow(unused)]
 /*
@@ -133,52 +135,12 @@ pub struct Optu32 {
     pub value: u32,
 }
 #[repr(C)]
-#[derive(Clone, Copy)]
-pub struct CVec<T> {
-    pub items: *mut T,
-    pub length: usize,
-    pub capacity: usize,
-    pub arena: *mut c_funcs::Arena,
-}
-unsafe impl<T> Send for CVec<T> {}
-unsafe impl<T> Sync for CVec<T> {}
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub struct Transform {
-    pub translation: Vector3,
-    pub rotation: Vector4,
-    pub scale: Vector4,
-}
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub struct TransformComp {
-    pub transform: Transform,
-    pub parent: Optu32,
-    pub children: CVec<u32>,
+#[derive(Clone)]
+pub struct COpt<T>{
+    pub valid:bool, 
+    pub value:T
 }
 
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub struct ModelComp {
-    pub shader_id: u32,
-    pub model_id: u32,
-}
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub struct BoundingBox {
-    pub min: Vector3,
-    pub max: Vector3,
-}
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub struct PhysicsComp {
-    pub bx: BoundingBox,
-    pub velocity: Vector3,
-    pub mass: f32,
-    pub collided_this_frame: bool,
-    pub movable: bool,
-    pub can_bounce: bool,
-}
 pub mod c_funcs {
     use super::*;
     #[repr(C)]

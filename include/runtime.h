@@ -12,7 +12,7 @@
 typedef struct {
     void (*on_tick)(void * self, f32 delta_time);
     void (*on_render)(void * self);
-    void (*on_setup)(void* self,u32 self_id);
+    void (*on_setup)(void* self,Ref self_id);
     void (*destructor)(void *self);
     ByteVec (*serialize)(void *self);
 }EntityVTable;
@@ -21,17 +21,17 @@ extern EntityVTable entity_default_vtable;
 #endif
 typedef struct Entity{
     EntityVTable * vtable;
-    u32 self_id;
+    Ref self_id;
 }Entity;
 typedef void (*Event)(void*self, void * args);
 typedef struct EventNode{
     Event event;
     void * args;
-    u32 entity_id;
+    Ref entity_id;
     struct EventNode * next;
 }EventNode;
 void default_on_tick(void *f, f32 dt);
-void default_on_setup(void*self ,u32 self_id);
+void default_on_setup(void*self ,Ref self_id);
 void default_on_render(void * self);
 void default_on_destroy(void * self);
 void default_serialize(void * self);
@@ -48,8 +48,10 @@ enable_resource_type(Model);
 enable_resource_type(Shader);
 enable_resource_type(Texture);
 enable_hash_type(String, u32);
+
 typedef struct {
     EntityRefVec entities;
+    u32Vec generations;
     ResourceModel models;
     ResourceShader shaders; 
     ResourceTexture textures;
@@ -58,6 +60,7 @@ typedef struct {
     OptionModelCompVec model_comps;
     OptionCharacterCompVec character_comps;
     OptionLightCompVec light_comps;
+    GenericComponents gen_comps;
     Vector3 directional_light_direction;
     Color directional_light_color;
     Color ambient_color;
@@ -65,7 +68,7 @@ typedef struct {
     Stringu32HashTable* loaded_shaders;
     Stringu32HashTable* loaded_textures;
     Camera3D camera;
-    Optionu32 camera_parent;
+    OptionRef camera_parent;
     Transform camera_relative_transform;
     RenderTexture2D target;
     bool failed_to_create;
@@ -77,9 +80,9 @@ typedef struct {
 extern Runtime RT;
 #endif
 void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)());
-Optionu32 create_entity(Entity * ent);
-bool destroy_entity(u32 id);
-Entity * get_entity(u32 id);
+OptionRef create_entity(Entity * ent);
+bool destroy_entity(Ref id);
+Entity * get_entity(Ref id);
 
 
 
@@ -94,9 +97,9 @@ bool remove_texture(u32 id);
 u32 create_model(Model model);
 OptionModel get_model(u32 id);
 bool remove_model(u32 id);
-void add_force(u32 id, Vector3 force);
 
-void call_event(u32 id, void (*func)(void* self, void * args), void * args);
+
+void call_event(Ref id, void (*func)(void* self, void * args), void * args);
 
 u32 load_shader(const char * vertex_path, const char *frag_path);
 String* get_shader_name(u32 id);
@@ -112,16 +115,16 @@ void unload_texture(u32 id);
 
 void unload_level();
 
-Vector3 get_location(u32 id);
-Quaternion get_rotation(u32 id);
-Vector3 get_scale(u32 id);
+Vector3 get_location(Ref id);
+Quaternion get_rotation(Ref id);
+Vector3 get_scale(Ref id);
 
-Vector3 get_forward_vector(u32 id);
-Vector3 get_up_vector(u32 id);
-Vector3 get_right_vector(u32 id);
+Vector3 get_forward_vector(Ref id);
+Vector3 get_up_vector(Ref id);
+Vector3 get_right_vector(Ref id);
 
 Camera3D * get_camera();
-void attach_camera_to(u32 id, Transform relative_trans);
+void attach_camera_to(Ref id, Transform relative_trans);
 void detach_camera();
 
 Vector3 * get_light_direction();
