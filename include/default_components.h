@@ -31,6 +31,7 @@ typedef struct{
     Color tint;
     float roughness;
     Color emmision;
+    Transform relative_transform;
 }ModelComp;
 enable_option_type(ModelComp);
 enable_vec_type(OptionModelComp);
@@ -115,6 +116,9 @@ bool set_##comp_name##_comp(Ref id, T comp){\
     if(!RT.entities.items[id.id]){\
         return false\
     }\
+    if(RT.generations.items[id.id] != id.gen_idx){\
+        return 0;\
+    }\
     Option##TVec * v = get_##comp_name##_comps();\
     if(!v) return false;\
     if(v->items[id.id].is_valid){\
@@ -130,6 +134,9 @@ T* get_##comp_name##_comp(Ref id){\
     if(!RT.entities.items[id.id]){\
         return 0;\
     }\
+    if(RT.generations.items[id.id] != id.gen_idx){\
+        return 0;\
+    }\
     Option##TVec * v = get_##comp_name##_comps();\
     if(v->items[id.id].is_valid){\
         return &v->items[id.id].value;\
@@ -139,6 +146,9 @@ bool remove_##comp_name##_comp(Ref id){\
     if(id>=RT.entities.length) return false;\
     if(!RT.entities.items[id.id]) return false;\
     Option##TVec * v = get_##comp_name##_comps();\
+    if(RT.generations.items[id.id] != id.gen_idx){\
+        return 0;\
+    }\
     if(v->items[id.id].is_valid){\
         destructor(&v->items[id.id].value);\
     }\
@@ -165,3 +175,6 @@ void register_##comp_name##_components(){\
         cstrGenericComponentHashTable_insert(STRINGIFY(T), v);\
     }\
 }\
+
+void register_system(char * name, void (*fn)());
+void deregister_system(char * name);

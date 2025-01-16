@@ -120,6 +120,7 @@ static Vector3 box_collision_normal_vector(BoundingBox a, BoundingBox b, Vector3
     float min_angle = 1.0;
     int min_idx = 0;
     float ts = min(min_dimension(a), min_dimension(b));
+    int fs = 0;
     while(true){
         for(int i =0; i<6; i++){
             Vector3 tmp = Vector3Scale(Vector3Reflect(out, norms[i]),dt);
@@ -135,6 +136,10 @@ static Vector3 box_collision_normal_vector(BoundingBox a, BoundingBox b, Vector3
             }
         }
         dt += 0.01;
+        if(fs>10000){
+            break;
+        }
+        fs +=1;
     }
     return norms[min_idx];
 }
@@ -374,11 +379,24 @@ static void collision_iter(PhysicsComp * comp, Transform * transform, u32 id, fl
             transform->translation=cache;
             PhysicsComp * ocmp = &phys.items[other].value;
             if(!ocmp->movable){
-                comp->velocity = Vector3Reflect(comp->velocity, norm);
+                if(comp->can_bounce){
+                    comp->velocity = Vector3Reflect(comp->velocity, norm);
+                } else{
+                    comp->velocity =Vector3Subtract(comp->velocity, Vector3Project(comp->velocity, norm));
+                }
             } else{
                 VectorTuple v = calc_hit_impulses(id, other, norm, 1.0);
-                comp->velocity = v.v1;
-                ocmp->velocity = v.v2;
+                if(comp->can_bounce){
+                    comp->velocity = v.v1;
+                } else{
+
+                }
+                if(ocmp->can_bounce){
+                    ocmp->velocity = v.v2;
+                } else{
+                    ocmp->velocity =Vector3Subtract(ocmp->velocity, Vector3Project(ocmp->velocity, norm));
+                }
+
             }
 
             break;
@@ -387,10 +405,10 @@ static void collision_iter(PhysicsComp * comp, Transform * transform, u32 id, fl
         //old_loc = transform->translation;
     }
     store_locations(id);
-    if(check_hit_non_opt(id, &norm, &other)){
+    /*if(check_hit_non_opt(id, &norm, &other)){
         hit = true;
         comp->collided_this_frame = true;
-    }
+    }*/
 }
 static void run_single(float dt){
     float min = 0.0;
@@ -478,7 +496,7 @@ static void *tick(void*){
 }
 Arena * arena_create_sized(size_t reqsize);
 void init_physics_rt(){
-    phys_arena = arena_create_sized(sizeof(PhysicsComp)*10000);
+    phys_arena = arena_create_sized(sizeof(PhysicsComp)*100000);
     for(int z = 0; z<TABLE_SIZE; z++){
         for(int y =0; y<TABLE_SIZE; y++){
             for(int x =0; x<TABLE_SIZE; x++){

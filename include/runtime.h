@@ -61,6 +61,7 @@ typedef struct {
     OptionCharacterCompVec character_comps;
     OptionLightCompVec light_comps;
     GenericComponents gen_comps;
+    cstrVoidFNHashTable * systems;
     Vector3 directional_light_direction;
     Color directional_light_color;
     Color ambient_color;

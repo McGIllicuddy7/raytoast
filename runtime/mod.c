@@ -7,6 +7,7 @@
 #define false 0
 void run_physics();
 void init_physics_rt();
+void update_characters();
 void finish_physics();
 void default_on_tick(void *f, f32 dt){
 
@@ -55,7 +56,7 @@ static void lighting_call(Shader s,int light_count, Vector3 locations[], Vector4
 }
 
 static void run_lighting(Shader s,Vector3 location){
-    const int size = 100;
+    #define size 100
     Vector3 positions[size] = {};
     Vector4 colors[size] = {};
     int count =0;
@@ -81,6 +82,14 @@ static void run_lighting(Shader s,Vector3 location){
         }
     }
     lighting_call(s, count, positions, colors);
+    #undef size
+}
+void run_systems(){
+    Iterator it = ITER_HASHTABLE(RT.systems);
+    void (**fn)() = 0;
+    while((fn = NEXT(it))){
+        (*fn)();
+    }
 }
 void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
     tmp_reset();
@@ -100,7 +109,8 @@ void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
     RT.ambient_color = (Color){64, 64, 64,128};
     RT.directional_light_color = (Color){128, 64, 58, 255};
     RT.directional_light_direction = (Vector3){0,0,-1};
-    for(int i =0; i<10; i++){
+    RT.systems = cstrVoidFNHashTable_create(100, (void*)hash_cstring, (void*)cstr_equals);
+    for(int i =0; i<100; i++){
         runtime_reserve();
     }
     SetTraceLogLevel(LOG_ALL);
@@ -129,6 +139,8 @@ void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
             }
         }
         on_tick();
+        run_systems();
+        update_characters();
         run_physics();
         BeginTextureMode(RT.target);
         ClearBackground(BLACK);
@@ -204,16 +216,20 @@ void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
                 if(!trans){
                     continue;
                 }
+                ModelComp mdcmp = RT.model_comps.items[i].value;
                 Matrix rot = QuaternionToMatrix(get_rotation((Ref){i, RT.generations.items[i]}));
                 Vector3 sc = get_scale((Ref){i, RT.generations.items[i]});
                 Matrix scale = MatrixScale(sc.x, sc.y, sc.z);
                 Matrix transform = MatrixMultiply(rot,scale);
                 Matrix mt = MatrixMultiply(MatrixTranslate(get_location((Ref){i, RT.generations.items[i]}).x ,get_location((Ref){i, RT.generations.items[i]}).y, get_location((Ref){i,RT.generations.items[i]}).z), transform);
+                Matrix rel = MatrixMultiply(MatrixTranslate(mdcmp.relative_transform.translation.x, mdcmp.relative_transform.translation.y, mdcmp.relative_transform.translation.z), MatrixMultiply(QuaternionToMatrix(mdcmp.relative_transform.rotation), MatrixScale(mdcmp.relative_transform.scale.x, mdcmp.relative_transform.scale.y,mdcmp.relative_transform.scale.z)));
+                mt = MatrixMultiply(rel, mt);
                 SetShaderValueMatrix(s, GetShaderLocation(s, "matModel"), mt);
+                transform = MatrixMultiply(transform,MatrixMultiply(QuaternionToMatrix(mdcmp.relative_transform.rotation), MatrixScale(mdcmp.relative_transform.scale.x, mdcmp.relative_transform.scale.y,mdcmp.relative_transform.scale.z)));
                 msh.value.transform = transform;
                 Material old = msh.value.materials[0];
                 msh.value.materials[0] = mat;
-                DrawModel(msh.value,get_location((Ref){i, RT.generations.items[i]}), 1.0,WHITE);
+                DrawModel(msh.value,Vector3Add(get_location((Ref){i, RT.generations.items[i]}),mdcmp.relative_transform.translation), 1.0,WHITE);
                 msh.value.materials[0] = old;
             }
         }
@@ -250,6 +266,7 @@ void unload_level(){
             free(RT.entities.items[i]);
         }
     }
+    unmake(RT.generations);
     unmake(RT.entities);
     ResourceModel_unmake(&RT.models);
     ResourceShader_unmake(&RT.shaders);
@@ -261,7 +278,7 @@ void unload_level(){
     unmake(RT.light_comps);
     Stringu32HashTable_unmake_funcs(RT.loaded_models, free_string, 0);
     Stringu32HashTable_unmake_funcs(RT.loaded_shaders, free_string, 0);
-   Stringu32HashTable_unmake_funcs(RT.loaded_textures, free_string, 0); 
+    Stringu32HashTable_unmake_funcs(RT.loaded_textures, free_string, 0); 
     UnloadRenderTexture(RT.target);
     EventNode* queue = RT.event_queue;
     tmp_reset();
@@ -332,4 +349,11 @@ void call_event(Ref id, void (*func)(void * self, void * args), void * args){
         }
         current->next = node;
     }
+}
+
+void register_system(char * name, void (*fn)()){
+    cstrVoidFNHashTable_insert(RT.systems, name, fn);
+}
+void deregister_system(char * name){
+    cstrVoidFNHashTable_remove(RT.systems, name);
 }

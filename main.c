@@ -2,8 +2,9 @@
 #include <raylib.h>
 #include "runtime.h"
 #include <raymath.h>
-
+#include <unistd.h>
 #include "utils.h"
+#include </opt/homebrew/include/gperftools/profiler.h>
 
 typedef struct{
     Entity entity;
@@ -14,7 +15,7 @@ EntityVTable TestEntityVTable = {.destructor  = default_on_destroy, .on_render =
 extern char * hello_from_rust(int f);
 extern Entity * create_test_rust_entity();
 float random_float(){
-   return GetRandomValue(0,10'000)/(10'000.0);
+   return GetRandomValue(0,10'000'000)/(10'000'000.0);
 }
 Vector3 gen_random_vector(float in_radius){
     float radius = sqrt(random_float());
@@ -44,7 +45,7 @@ void TestEntity_on_tick(TestEntity * self, float delta_time){
     if(Vector3Distance(location, (Vector3){0,0,0})<1e-16){
         //add_force(id, gen_random_vector(10.0));
     } else{
-        add_force(id,Vector3Scale(Vector3Normalize(get_location(id)), -delta_time));
+        add_force(id,(Vector3) {0,0,-delta_time});
     }
 }
 Ref create_wall(Vector3 location, Vector3 scale, u32 mesh_id,Color tin){
@@ -66,14 +67,35 @@ Ref create_wall(Vector3 location, Vector3 scale, u32 mesh_id,Color tin){
     phys.box.min = Vector3Scale(scale, -0.5);
     phys.velocity = (Vector3){};
     phys.mass = scale.x*scale.y*scale.z;
+    phys.can_bounce = false;
     set_transform_comp(id, trans);
     ModelComp msh = {};
     msh.model_id =mesh_id;
     msh.shader_id=0;
     msh.tint = tin;
+    msh.relative_transform = transform_default();
     set_model_comp(id, msh);
     set_physics_comp(id, phys);
     return id;
+}
+void create_character(Vector3 location, Vector3 forward){
+    Entity*et = malloc(sizeof(TestEntity));
+    et->vtable = &TestEntityVTable;
+    Ref ref = create_entity(et).value;
+    PhysicsComp phys;
+    phys.box.max = (Vector3){0.5, 0.5, 0.5};
+    phys.box.min = (Vector3){-0.5, -0.5, -0.5};
+    phys.can_bounce = false;
+    phys.movable = true;
+    CharacterComp chr;
+    chr.control_rotation = quat_from_vector(forward);
+    TransformComp trans  ={};
+    trans.transform = transform_default();
+    trans.transform.translation = location;
+    set_physics_comp(ref, phys);
+    set_transform_comp(ref, trans);
+    set_character_comp(ref, chr);
+    attach_camera_to(ref, transform_default());
 }
 void setup(){
     srand(time(0));
@@ -82,10 +104,11 @@ void setup(){
     u32 cube_id = create_model(LoadModelFromMesh(GenMeshCube(1.0, 1.0, 1.0)));
     u32 model_id = load_model("sphere.obj");
     ModelComp msh = {};
+    msh.relative_transform = transform_default();
     msh.model_id = cube_id;
     msh.shader_id = load_shader("shaders/base.vs", "shaders/bsdf.fs");
     msh.tint = GREEN;
-    int max = 100;
+    int max =5000;
     int movable_amnt = 1;
     int xc = 0;
     int yc = 0;
@@ -102,10 +125,10 @@ void setup(){
         transform.translation = (Vector3){5*xc-25, 5*yc-25, 20};
         float theta = random_float()*2*PI;
         float phi = random_float()*2*PI;
-        float radius = sqrt(random_float())*60+5;
+        float radius = sqrt(random_float())*100;
         float scale = 1.0;
         transform.translation = vec_from_sphere(radius, phi, theta);
-        //transform.translation.z = fabs(transform.translation.z)+5.0;
+        transform.translation.z = fabs(transform.translation.z)+5.0+random_float()*40;
         transform.scale = (Vector3){scale, scale, scale};
         transform.rotation = (Quaternion){0.0, 0.0, 0.0, 1.0};
         TransformComp trans ={};
@@ -117,16 +140,17 @@ void setup(){
         phys.box.min = (Vector3){-0.5, -0.5, -0.5};
         phys.box.max = Vector3Scale(phys.box.max, scale);
         phys.box.min = Vector3Scale(phys.box.min, scale);
-        phys.velocity = Vector3Negate(Vector3Normalize(transform.translation));
+        //phys.velocity = Vector3Negate(Vector3Normalize(transform.translation));
         phys.mass = scale;
+        phys.can_bounce = true;
         set_transform_comp(id, trans);
         set_model_comp(id, msh);
         set_physics_comp(id, phys);
     }
-    get_camera()->position = (Vector3){-20,0,0};
-    create_wall((Vector3){}, (Vector3){10,10,1}, cube_id,RED);
+    get_camera()->position = (Vector3){-4,0,5};
+    create_wall((Vector3){}, (Vector3){200,200,0.05}, cube_id,RED);
     create_light((Vector3){0, 0, 8.0}, WHITE, 1.0, 10.0);
-   //attach_camera_to(0, transform_default());
+    //create_character((Vector3){0,0,1.2}, (Vector3){1,0,0});
    //get_transform_comp(0)->transform.rotation =  quat_from_vector(Vector3Normalize(Vector3Negate( get_transform_comp(0)->transform.translation)));
 }
 void on_tick(){
@@ -142,7 +166,7 @@ void on_render(){
 }
 
 int main(int argc, const char ** argv){
-    //ProfilerStart("dump.txt");
+    ProfilerStart("dump.txt");
     tmp_init();
     init_runtime(setup, on_tick, on_render);
 } 

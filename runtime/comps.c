@@ -12,7 +12,6 @@ bool set_transform_comp(Ref id, TransformComp trans){
         unmake(RT.transform_comps.items[id.id].value.children);
     }
     if(RT.generations.items[id.id] != id.gen_idx){
-        todo();
         return 0;
     }    
     RT.transform_comps.items[id.id] = (OptionTransformComp)Some(trans);
@@ -324,7 +323,6 @@ Ref create_light(Vector3 location, Color color, float brightness, float radius){
     TransformComp trans = {};
     trans.transform = transform_default();
     trans.transform.translation = location;
-    trans.transform.rotation = QuaternionFromEuler(-PI/2.0, 0.0, 0.0);
     set_transform_comp(id, trans);
     set_light_comp(id,cmp);
     ModelComp msh = {};
@@ -333,6 +331,21 @@ Ref create_light(Vector3 location, Color color, float brightness, float radius){
     msh.emmisive_texture_id = 0;
     msh.emmision = WHITE;
     msh.diffuse_texture_id = load_texture("lightbolb.png");
+    msh.relative_transform = transform_default();
+    msh.relative_transform.rotation = QuaternionFromEuler(-PI/2.0, 0.0, 0.0);
     set_model_comp(id, msh);
     return id;
+}
+void update_character(Ref ref, CharacterComp * cmp){
+    add_force(ref, (Vector3){0,0,-1});
+}
+void update_characters(){
+    for(int i =0; i<RT.character_comps.length; i++){
+        if(RT.character_comps.items[i].is_valid){
+            Ref rf;
+            rf.gen_idx = RT.generations.items[i];
+            rf.id = i;
+            update_character(rf, &RT.character_comps.items[i].value);
+        }
+    }
 }

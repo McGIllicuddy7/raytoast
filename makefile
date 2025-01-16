@@ -1,8 +1,8 @@
 files = runtime/mod.c runtime/physics.c main.c utils_impl.c runtime/comps.c runtime/resources.c
 flags = -std=c2x  -I /opt/homebrew/include -L /opt/homebrew/lib -pg -I include 
-debug = -g3 -fsanitize=address ./rusty/target/debug/librusty.a
+debug = -g3 ./rusty/target/debug/librusty.a
 release = -O2 ./rusty/target/release/librusty.a 
-libs=  -l raylib -lm 
+libs=  -l raylib -lm -lprofiler
 make: $(files)
 	cd rusty && cargo build 
 	cd ..
