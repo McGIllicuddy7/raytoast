@@ -1,15 +1,11 @@
-files = runtime/mod.c runtime/physics.c main.c utils_impl.c runtime/comps.c runtime/resources.c
+files = runtime/mod.c runtime/physics.c main.c utils_impl.c runtime/comps.c runtime/resources.c runtime/drawing.c
 flags = -std=c2x  -I /opt/homebrew/include -L /opt/homebrew/lib -pg -I include 
-debug = -g3 ./rusty/target/debug/librusty.a
-release = -O2 ./rusty/target/release/librusty.a 
+debug = -g3 
+release = -O2 
 libs=  -l raylib -lm -lprofiler
 make: $(files)
-	cd rusty && cargo build 
-	cd ..
 	gcc $(files) $(flags) $(libs) $(debug)
 release:$(files)
-	cd rusty && cargo build --release
-	cd ..
 	gcc $(files) $(flags) $(libs) $(release)
 profile: $(files)
 	make 

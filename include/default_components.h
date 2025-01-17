@@ -47,6 +47,7 @@ typedef struct{
     bool movable;
     bool can_bounce;
     bool collided_this_frame;
+    bool only_overlap;
 }PhysicsComp;
 enable_option_type(PhysicsComp);
 enable_vec_type(OptionPhysicsComp);
@@ -99,8 +100,11 @@ enable_hash_type(cstr, VoidFN);
 typedef struct{
     cstrGenericComponentHashTable * table;
     cstrVoidFNHashTable * systems;
+    cstrVoidFNHashTable * graphics_systems;
+    cstrVoidFNHashTable * drawing_systems;
 }GenericComponents;
-
+void unload_gen_comp(GenericComponent * cmp);
+void unload_gen_comps(GenericComponents cmps);
 #define enable_component(T, comp_name, destructor)\
 bool set_##comp_name##_comp(Ref id, T comp_name);\
 T* get_##comp_name##_comp(Ref id);\
@@ -178,3 +182,9 @@ void register_##comp_name##_components(){\
 
 void register_system(char * name, void (*fn)());
 void deregister_system(char * name);
+
+void register_graphics_system(char * name, void(*fn)());
+void deregister_graphics_system(char * name);
+
+void register_drawing_system(char * name, void (*fn)());
+void deregister_drawing_system(char * name);

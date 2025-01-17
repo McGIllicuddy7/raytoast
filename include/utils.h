@@ -325,13 +325,17 @@ typedef struct{\
 	size_t TableSize;\
 	size_t (*hash_func)(T);\
 	bool (*eq_func)(T,T);\
+	void (*not_key)(T*);\
+	void (*not_value)(U*);\
 }T##U##HashTable;\
-static T##U##HashTable * T##U##HashTable_create(size_t size,size_t (*hash_func)(T),bool (*eq_func)(T,T)){\
+static T##U##HashTable * T##U##HashTable_create(size_t size,size_t (*hash_func)(T),bool (*eq_func)(T,T), void (*tdestructor)(T *), void (*udestructor)(U*)){\
 	T##U##HashTable * out = (T##U##HashTable *)global_alloc(1, sizeof(T##U##HashTable));\
 	out->Table= (T##U##KeyValuePairVec *)global_alloc(1,sizeof(T##U##KeyValuePairVec)*size);\
 	out->TableSize = size;\
 	out->hash_func = hash_func;\
 	out->eq_func = eq_func;\
+	out->not_key = tdestructor;\
+	out->not_value = udestructor;\
 	for(int i =0; i<size; i++){\
 		out->Table[i] = (T##U##KeyValuePairVec)make_with_cap(0,T##U##KeyValuePair,16);\
 	}\
@@ -424,21 +428,16 @@ static void T##U##HashTable_remove(T##U##HashTable * table, T key){\
         }\
     }\
     if(idx>=0){\
+		table->not_key(&table->Table[hash].items[idx].key);\
+		table->not_value(&table->Table[hash].items[idx].value);\
         v_remove(table->Table[hash], idx);\
     }\
 }\
 static void T##U##HashTable_unmake(T##U##HashTable * table){\
 	for(int i =0; i<table->TableSize; i++){\
-		unmake(table->Table[i]);\
-	}\
-	global_free(table->Table);\
-	global_free(table);\
-}\
-static void T##U##HashTable_unmake_funcs(T##U##HashTable * table,void (*not_key)(T * key), void (*not_value)(U * value)){\
-	for(int i =0; i<table->TableSize; i++){\
 		for(int j =0; j<table->Table[i].length; j++){\
-			if(not_key){not_key(&table->Table[i].items[j].key);}\
-			if(not_value){not_value(&table->Table[i].items[j].value);}\
+			if(table->not_key){table->not_key(&table->Table[i].items[j].key);}\
+			if(table->not_value){table->not_value(&table->Table[i].items[j].value);}\
 		}\
 		unmake(table->Table[i]);\
 	}\
@@ -678,7 +677,6 @@ void arena_destroy(Arena * arena){
 		arena_defer *def = arena->defer_queue;
 		def->func(def->data);
 		arena->defer_queue = def->next;
-		
 	}
 	#ifdef ARENA_REGISTER
 	deregister_arena(arena);
@@ -739,6 +737,11 @@ void arena_reset(Arena * arena){
 	arena->next = 0;
     arena->next_ptr= arena->buffer;
     arena->previous_allocation = 0;
+	while(arena->defer_queue){
+		arena_defer *def = arena->defer_queue;
+		def->func(def->data);
+		arena->defer_queue = def->next;
+	}
 	pthread_mutex_unlock(&arena->lock);
 }
 

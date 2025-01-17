@@ -349,3 +349,12 @@ void update_characters(){
         }
     }
 }
+void unload_gen_comp(GenericComponent * cmp){
+    cmp->destructor(cmp);
+}
+void unload_gen_comps(GenericComponents cmps){
+    cstrVoidFNHashTable_unmake(cmps.systems);
+    cstrVoidFNHashTable_unmake(cmps.graphics_systems); 
+    cstrVoidFNHashTable_unmake(cmps.drawing_systems);
+    cstrGenericComponentHashTable_unmake(cmps.table);
+}

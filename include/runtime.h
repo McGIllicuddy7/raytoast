@@ -5,6 +5,7 @@
 #include "default_components.h"
 #include "resource.h"
 #include <pthread.h>
+#include "lambda.h"
 #define true 1 
 #define false 0
 
@@ -48,7 +49,8 @@ enable_resource_type(Model);
 enable_resource_type(Shader);
 enable_resource_type(Texture);
 enable_hash_type(String, u32);
-
+make_lambda_type(void, void);
+enable_vec_type(fn_void);
 typedef struct {
     EntityRefVec entities;
     u32Vec generations;
@@ -61,7 +63,6 @@ typedef struct {
     OptionCharacterCompVec character_comps;
     OptionLightCompVec light_comps;
     GenericComponents gen_comps;
-    cstrVoidFNHashTable * systems;
     Vector3 directional_light_direction;
     Color directional_light_color;
     Color ambient_color;
@@ -74,9 +75,16 @@ typedef struct {
     RenderTexture2D target;
     bool failed_to_create;
     EventNode * event_queue;
+    fn_voidVec draw_calls;
     bool paused;
 }Runtime;
 
+typedef struct{
+    bool hit;
+    Ref hit_id;
+    Vector3 location;
+    Vector3 normal;
+} CollisionResult;
 #ifndef RUNTIME_MOD
 extern Runtime RT;
 #endif
@@ -136,3 +144,6 @@ Transform transform_default();
 Quaternion quat_from_vector(Vector3 location);
 void load_level(const char * path);
 void save_level(const char * path);
+
+CollisionResult line_trace(Vector3 Start,Vector3 End);
+void draw_call(fn_void func);

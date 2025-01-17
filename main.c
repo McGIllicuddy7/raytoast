@@ -4,6 +4,7 @@
 #include <raymath.h>
 #include <unistd.h>
 #include "utils.h"
+#include "drawing.h"
 #include </opt/homebrew/include/gperftools/profiler.h>
 
 typedef struct{
@@ -108,7 +109,7 @@ void setup(){
     msh.model_id = cube_id;
     msh.shader_id = load_shader("shaders/base.vs", "shaders/bsdf.fs");
     msh.tint = GREEN;
-    int max =5000;
+    int max =1000;
     int movable_amnt = 1;
     int xc = 0;
     int yc = 0;
@@ -125,7 +126,7 @@ void setup(){
         transform.translation = (Vector3){5*xc-25, 5*yc-25, 20};
         float theta = random_float()*2*PI;
         float phi = random_float()*2*PI;
-        float radius = sqrt(random_float())*100;
+        float radius = sqrt(random_float())*50;
         float scale = 1.0;
         transform.translation = vec_from_sphere(radius, phi, theta);
         transform.translation.z = fabs(transform.translation.z)+5.0+random_float()*40;
@@ -135,11 +136,12 @@ void setup(){
         trans.transform = transform;
         trans.parent.is_valid = false;
         PhysicsComp phys = {};
-        phys.movable = i%movable_amnt == 0;
+        phys.movable = false;
         phys.box.max = (Vector3){0.5, 0.5, 0.5};
         phys.box.min = (Vector3){-0.5, -0.5, -0.5};
         phys.box.max = Vector3Scale(phys.box.max, scale);
         phys.box.min = Vector3Scale(phys.box.min, scale);
+       // phys.only_overlap =true;
         //phys.velocity = Vector3Negate(Vector3Normalize(transform.translation));
         phys.mass = scale;
         phys.can_bounce = true;
@@ -148,8 +150,8 @@ void setup(){
         set_physics_comp(id, phys);
     }
     get_camera()->position = (Vector3){-4,0,5};
-    create_wall((Vector3){}, (Vector3){200,200,0.05}, cube_id,RED);
-    create_light((Vector3){0, 0, 8.0}, WHITE, 1.0, 10.0);
+    create_wall((Vector3){}, (Vector3){100,100,2.0}, cube_id,RED);
+    create_light((Vector3){0, 0, 8.0}, WHITE, 1.0, 100.0);
     //create_character((Vector3){0,0,1.2}, (Vector3){1,0,0});
    //get_transform_comp(0)->transform.rotation =  quat_from_vector(Vector3Normalize(Vector3Negate( get_transform_comp(0)->transform.translation)));
 }
@@ -159,14 +161,28 @@ void on_tick(){
     if(IsKeyPressed(KEY_ESCAPE)){
         exit(0);
     }
+
+    Vector3 lc = get_camera()->position;
+    Vector3 t = Vector3Normalize(Vector3Subtract(get_camera()->target, lc));
+    Vector3 end = Vector3Add(Vector3Scale(t, 100),lc);
+    CollisionResult col = line_trace(lc, end);
+    if(col.hit){
+        draw_sphere(col.location,1.0, BLUE);
+        if(IsKeyDown(KEY_X)){
+            destroy_entity(col.hit_id);
+        }
+    } else{
+        draw_sphere(end,1.0, BLUE); 
+    }
     frame_count += 1;
 }
 void on_render(){
     DrawFPS(1500, 100);
+    EndMode3D();
 }
 
 int main(int argc, const char ** argv){
-    ProfilerStart("dump.txt");
+    //ProfilerStart("dump.txt");
     tmp_init();
     init_runtime(setup, on_tick, on_render);
 } 

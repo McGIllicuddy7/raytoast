@@ -31,7 +31,7 @@ size_t hash_int3(Int3 i){
 bool Int3_equals(Int3 a, Int3 b){
    return a.x == b.x && a.y == b.y && a.z == b.z;
 }
-#define TABLE_SIZE 64
+#define TABLE_SIZE 128
 static u32Vec TABLE[TABLE_SIZE][TABLE_SIZE][TABLE_SIZE] = {};
 static Arena * phys_arena = 0;
 float tile_size= 1.0;
@@ -136,7 +136,7 @@ static Vector3 box_collision_normal_vector(BoundingBox a, BoundingBox b, Vector3
             }
         }
         dt += 0.01;
-        if(fs>10000){
+        if(fs>100000){
             break;
         }
         fs +=1;
@@ -363,7 +363,7 @@ static void collision_iter(PhysicsComp * comp, Transform * transform, u32 id, fl
     Vector3 norm;
     u32 other;
     while(travelled<distance){
-        if(fs>10){
+        if(fs>100){
             break;
         }
         float dist = max_allowed_distance(id);
@@ -376,8 +376,11 @@ static void collision_iter(PhysicsComp * comp, Transform * transform, u32 id, fl
         Vector3 cache = transform->translation;
         transform->translation = Vector3Add(transform->translation, Vector3Scale(nv,dist));
         if(check_hit(id, &norm, &other)){
-            transform->translation=cache;
             PhysicsComp * ocmp = &phys.items[other].value;
+            if(ocmp->only_overlap || comp->only_overlap){
+                    continue;
+            }
+            transform->translation=cache;
             if(!ocmp->movable){
                 if(comp->can_bounce){
                     comp->velocity = Vector3Reflect(comp->velocity, norm);
@@ -385,6 +388,7 @@ static void collision_iter(PhysicsComp * comp, Transform * transform, u32 id, fl
                     comp->velocity =Vector3Subtract(comp->velocity, Vector3Project(comp->velocity, norm));
                 }
             } else{
+
                 VectorTuple v = calc_hit_impulses(id, other, norm, 1.0);
                 if(comp->can_bounce){
                     comp->velocity = v.v1;
@@ -519,3 +523,135 @@ void finish_physics(){
     RT.transform_comps = clone(trans,0);
     RT.physics_comps = clone(phys,0);
 }
+static float max_allowed_distance_array_box(BoundingBox bx, u32Vec cmps){
+    float min = tile_size;
+    for(int i = 0; i<cmps.length; i++){
+        u32 id1 = cmps.items[i];
+        if(!trans.items[id1].is_valid){
+            continue;
+        }
+        Vector3 t1 = Vector3Scale(Vector3Add(bx.min, bx.max), 0.5);
+        Vector3 t2 = trans.items[id1].value.transform.translation;
+        BoundingBox b1 = bx;
+        BoundingBox b2 = phys.items[id1].value.box;
+        if(Vector3Distance(t1, t2)>min*2.0){
+            continue;
+        }
+        b2.max = Vector3Add(b2.max, trans.items[id1].value.transform.translation);
+        b2.min = Vector3Add(b2.min, trans.items[id1].value.transform.translation);
+        float dist = bb_distance(b1, b2);
+        if(dist<min){
+            min = dist;
+        }
+    }
+    return min;
+}
+static float max_allowed_distance_box(BoundingBox bx){
+    float min = tile_size;
+    int count =2;
+    Int3 lc = location_to_int3(Vector3Scale(Vector3Add(bx.min, bx.max), 0.5));
+    for(int dz = -count; dz<= count; dz++){
+        for(int dy = -count; dy<=count; dy++){
+            for(int dx = -count; dx<=count; dx++){
+                if(lc.x+dx <0 || lc.x+dx>=TABLE_SIZE || lc.y+dy<0 || lc.y+dy>=TABLE_SIZE || lc.z+dz<0 || lc.z+dz>=TABLE_SIZE){
+                    continue;
+                }
+                u32Vec cmps = TABLE[lc.z+dz][lc.y+dy][lc.x+dx];
+                float fmin = max_allowed_distance_array_box(bx, cmps);
+                if(fmin<min){
+                    min = fmin;
+                }
+            }
+        }
+    }
+    return min;
+}
+static bool check_hit_array_box(BoundingBox bx, Vector3 velocity,u32Vec cmps,Vector3 * normal,u32 * other_hit){
+    int count =2;
+    for(int i = 0; i<cmps.length; i++){
+        u32 id1 = cmps.items[i];
+        if(!trans.items[id1].is_valid){
+            continue;
+        }
+        Vector3 t1 =Vector3Scale(Vector3Add(bx.max, bx.min),0.5);
+        Vector3 t2 = trans.items[id1].value.transform.translation;
+        BoundingBox b1 = bx;
+        BoundingBox b2 = phys.items[id1].value.box;
+        if(Vector3Distance(t1, t2)>(Vector3Distance(b1.max, b1.min)+Vector3Distance(b2.max, b2.min))*2.0){
+            continue;
+        }
+        b2.max = Vector3Add(b2.max, trans.items[id1].value.transform.translation);
+        b2.min = Vector3Add(b2.min, trans.items[id1].value.transform.translation);
+        bool hit = CheckCollisionBoxes(b1, b2);
+        if(hit){
+            const Vector3 norm = box_collision_normal_vector(b1, b2, velocity);
+            *normal=  norm;
+            *other_hit = id1;
+            return true;
+        }
+    }
+    return false;
+}
+static bool check_hit_box(BoundingBox bx,Vector3 velocity, Vector3 * normal,u32 * other_hit){
+    int count =1;
+    Int3 lc = location_to_int3(Vector3Scale(Vector3Add(bx.min, bx.max),0.5));
+    bool hit0 = false;
+    for(int dz = -count; dz<= count; dz++){
+        for(int dy = -count; dy<=count; dy++){
+            for(int dx = -count; dx<=count; dx++){
+                if(lc.x+dx <0 || lc.x+dx>=TABLE_SIZE || lc.y+dy<0 || lc.y+dy>=TABLE_SIZE || lc.z+dz<0 || lc.z+dz>=TABLE_SIZE){
+                    continue;
+                }
+                if(Int3_equals(lc, (Int3){lc.x+dx, lc.y+dy, lc.z+dz})){
+                    hit0 = true;
+                }
+                u32Vec cmps = TABLE[lc.z+dz][lc.y+dy][lc.x+dx];
+                bool hit = check_hit_array_box(bx,velocity, cmps,normal, other_hit);
+                if(hit){
+                    return true;
+                }
+            }
+        }
+    }
+    assert(hit0);
+    return false;
+}
+ CollisionResult line_trace(Vector3 start, Vector3 end){
+    if(Vector3Equals(start, end)){
+        return (CollisionResult){};
+    }
+    Vector3 s = start;
+    float dist = Vector3Distance(start, end);
+    Vector3 norm = Vector3Scale(Vector3Subtract(end, start), 1/dist);
+    float trav = 0.0;
+    while(trav<=dist){
+        Vector3 previous = s;
+        Vector3 del = (Vector3){0.001, 0.001, 0.001};
+        BoundingBox bx = {Vector3Subtract(s, del), Vector3Add(s, del)};
+        float max_travelled = max_allowed_distance_box(bx);
+        bool check = false;
+        if(max_travelled>tile_size){
+            max_travelled = tile_size;
+        }
+        if(max_travelled<0.0001){
+            max_travelled = 0.0001;
+            check = true;
+        }
+        s = Vector3Add(s, Vector3Scale(norm, max_travelled));
+        if(check){
+            Vector3 normal;
+            u32 hit;
+            bx = (BoundingBox){Vector3Subtract(s, del), Vector3Add(s, del)};
+            if(check_hit_box(bx,norm,&normal,&hit)){
+                CollisionResult col;
+                col.hit = true;
+                col.hit_id = (Ref){.gen_idx = RT.generations.items[hit], .id = hit};
+                col.normal = normal;
+                col.location = previous;
+                return col;
+            }
+        }
+        trav += max_travelled;
+    }
+    return (CollisionResult){};
+ }

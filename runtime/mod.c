@@ -85,7 +85,7 @@ static void run_lighting(Shader s,Vector3 location){
     #undef size
 }
 void run_systems(){
-    Iterator it = ITER_HASHTABLE(RT.systems);
+    Iterator it = ITER_HASHTABLE(RT.gen_comps.systems);
     void (**fn)() = 0;
     while((fn = NEXT(it))){
         (*fn)();
@@ -102,14 +102,17 @@ void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
     RT.physics_comps =(OptionPhysicsCompVec)make(0, OptionPhysicsComp);
     RT.light_comps = (OptionLightCompVec)make(0, OptionLightComp);
     RT.character_comps = make(0, OptionCharacterComp);
-    RT.loaded_models = Stringu32HashTable_create(1000, hash_string, string_equals);
-    RT.loaded_shaders = Stringu32HashTable_create(1000, hash_string, string_equals); 
+    RT.loaded_models = Stringu32HashTable_create(1000, hash_string, string_equals, unmake_string, (void*)no_op_void);
+    RT.loaded_shaders = Stringu32HashTable_create(1000, hash_string, string_equals, unmake_string, (void*)no_op_void); 
     RT.textures = ResourceTexture_make(UnloadTexture);
-    RT.loaded_textures = Stringu32HashTable_create(1000, hash_string, string_equals);
+    RT.loaded_textures = Stringu32HashTable_create(1000, hash_string, string_equals, unmake_string,(void*)no_op_void);
     RT.ambient_color = (Color){64, 64, 64,128};
     RT.directional_light_color = (Color){128, 64, 58, 255};
     RT.directional_light_direction = (Vector3){0,0,-1};
-    RT.systems = cstrVoidFNHashTable_create(100, (void*)hash_cstring, (void*)cstr_equals);
+    RT.gen_comps.systems = cstrVoidFNHashTable_create(100, (void*)hash_cstring, (void*)cstr_equals, (void*)no_op_void, (void*)no_op_void);
+    RT.gen_comps.graphics_systems = cstrVoidFNHashTable_create(100, (void*)hash_cstring, (void*)cstr_equals, (void*)no_op_void, (void*)no_op_void);
+    RT.gen_comps.drawing_systems = cstrVoidFNHashTable_create(100, (void*)hash_cstring, (void*)cstr_equals, (void*)no_op_void, (void*)no_op_void); 
+    RT.gen_comps.table = cstrGenericComponentHashTable_create(100, (void*)hash_cstring, (void*)cstr_equals, (void*)no_op_void,unload_gen_comp);
     for(int i =0; i<100; i++){
         runtime_reserve();
     }
@@ -125,10 +128,12 @@ void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
     RT.camera.projection = CAMERA_PERSPECTIVE;
     RT.target = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
     setup();
+    RT.draw_calls =tmp_make(fn_void);
     Material mat = LoadMaterialDefault();
     Material svd_mat = mat;
     Shader default_post_process = LoadShader("shaders/base.vs", "shaders/default_post_process.fs");
     while(!WindowShouldClose()){
+        RT.draw_calls =tmp_make(fn_void);
         if (RT.failed_to_create){
             runtime_reserve();
         }
@@ -233,6 +238,10 @@ void init_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
                 msh.value.materials[0] = old;
             }
         }
+        for(int i =0; i<RT.draw_calls.length; i++){
+            fn_void func = RT.draw_calls.items[i];
+            call(func);
+        }
         EndMode3D();
         EndTextureMode();
         BeginDrawing();
@@ -276,9 +285,10 @@ void unload_level(){
     unmake(RT.model_comps);
     unmake(RT.character_comps);
     unmake(RT.light_comps);
-    Stringu32HashTable_unmake_funcs(RT.loaded_models, free_string, 0);
-    Stringu32HashTable_unmake_funcs(RT.loaded_shaders, free_string, 0);
-    Stringu32HashTable_unmake_funcs(RT.loaded_textures, free_string, 0); 
+    unload_gen_comps(RT.gen_comps);
+    Stringu32HashTable_unmake(RT.loaded_models);
+    Stringu32HashTable_unmake(RT.loaded_shaders);
+    Stringu32HashTable_unmake(RT.loaded_textures);
     UnloadRenderTexture(RT.target);
     EventNode* queue = RT.event_queue;
     tmp_reset();
@@ -296,15 +306,35 @@ OptionRef create_entity(Entity * ent){
     RT.failed_to_create = true;
     return (OptionRef)None;
 }
-bool destroy_entity(Ref id){
+static void destroy_entity_actual(void * ptr){
+    Ref * p = ptr;
+    Ref id = *p;
     if(id.id> RT.entities.length){
-        return false;
+        return;
     } 
     if(RT.entities.items[id.id]){
         RT.entities.items[id.id]->vtable->destructor(RT.entities.items[id.id]); 
         free(RT.entities.items[id.id]);
         RT.entities.items[id.id] = 0; 
-        return true;
+        RT.character_comps.items[id.id] = (OptionCharacterComp)None;
+        RT.model_comps.items[id.id] = (OptionModelComp)None;
+        RT.transform_comps.items[id.id] = (OptionTransformComp)None;
+        RT.light_comps.items[id.id] = (OptionLightComp)None;
+        RT.physics_comps.items[id.id] = (OptionPhysicsComp)None;
+        if(RT.camera_parent.is_valid&& RT.camera_parent.value.id == id.id){
+            RT.camera_parent = (OptionRef)None;
+        }
+        return;
+    } 
+}
+bool destroy_entity(Ref id){
+    if(id.id> RT.entities.length){
+        return false;
+    } 
+    if(RT.entities.items[id.id]){
+        Ref * p = tmp_alloc(sizeof(Ref));
+        *p = id;
+        defer(&temporary_allocator, destroy_entity_actual, p);
     }
     return false;
 }
@@ -352,8 +382,26 @@ void call_event(Ref id, void (*func)(void * self, void * args), void * args){
 }
 
 void register_system(char * name, void (*fn)()){
-    cstrVoidFNHashTable_insert(RT.systems, name, fn);
+    cstrVoidFNHashTable_insert(RT.gen_comps.systems, name, fn);
 }
 void deregister_system(char * name){
-    cstrVoidFNHashTable_remove(RT.systems, name);
+    cstrVoidFNHashTable_remove(RT.gen_comps.systems, name);
+}
+
+void draw_call(fn_void func){
+    v_append(RT.draw_calls, func);
+}
+
+void register_graphics_system(char * name, void(*fn)()){
+    cstrVoidFNHashTable_insert(RT.gen_comps.graphics_systems, name, fn);
+}
+void deregister_graphics_system(char * name){
+    cstrVoidFNHashTable_remove(RT.gen_comps.graphics_systems, name);
+}
+
+void register_drawing_system(char * name, void (*fn)()){
+    cstrVoidFNHashTable_insert(RT.gen_comps.drawing_systems, name, fn);
+}
+void deregister_drawing_system(char * name){
+    cstrVoidFNHashTable_remove(RT.gen_comps.drawing_systems, name);
 }
