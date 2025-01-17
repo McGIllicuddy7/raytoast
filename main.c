@@ -156,6 +156,12 @@ void setup(){
    //get_transform_comp(0)->transform.rotation =  quat_from_vector(Vector3Normalize(Vector3Negate( get_transform_comp(0)->transform.translation)));
 }
 void on_tick(){
+    if(rand()%10 ==0){
+        for(int i =0; i<rand()%10+2; i++){
+            log_msg("hey toast i love you", 1.0);
+        }
+    }
+
     static u128 frame_count = 0;
     UpdateCamera(get_camera(), CAMERA_FREE);
     if(IsKeyPressed(KEY_ESCAPE)){
@@ -178,7 +184,6 @@ void on_tick(){
 }
 void on_render(){
     DrawFPS(1500, 100);
-    EndMode3D();
 }
 
 int main(int argc, const char ** argv){

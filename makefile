@@ -1,4 +1,4 @@
-files = runtime/mod.c runtime/physics.c main.c utils_impl.c runtime/comps.c runtime/resources.c runtime/drawing.c
+files = runtime/mod.c runtime/physics.c main.c utils_impl.c runtime/comps.c runtime/resources.c runtime/drawing.c runtime/logging.c
 flags = -std=c2x  -I /opt/homebrew/include -L /opt/homebrew/lib -pg -I include 
 debug = -g3 
 release = -O2 
