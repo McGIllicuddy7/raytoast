@@ -83,11 +83,13 @@ void create_character(Vector3 location, Vector3 forward){
     Entity*et = malloc(sizeof(TestEntity));
     et->vtable = &TestEntityVTable;
     Ref ref = create_entity(et).value;
-    PhysicsComp phys;
-    phys.box.max = (Vector3){0.5, 0.5, 0.5};
-    phys.box.min = (Vector3){-0.5, -0.5, -0.5};
-    phys.can_bounce = false;
+    PhysicsComp phys = {};
+    float sc = .2;
+    phys.box.max = (Vector3){sc, sc, sc};
+    phys.box.min = (Vector3){-sc, -sc, -sc};
+    phys.can_bounce =false;
     phys.movable = true;
+    phys.mass = 1.0;
     CharacterComp chr;
     chr.control_rotation = quat_from_vector(forward);
     TransformComp trans  ={};
@@ -109,7 +111,7 @@ void setup(){
     msh.model_id = cube_id;
     msh.shader_id = load_shader("shaders/base.vs", "shaders/bsdf.fs");
     msh.tint = GREEN;
-    int max =1000;
+    int max =100;
     int movable_amnt = 1;
     int xc = 0;
     int yc = 0;
@@ -136,7 +138,7 @@ void setup(){
         trans.transform = transform;
         trans.parent.is_valid = false;
         PhysicsComp phys = {};
-        phys.movable = false;
+        phys.movable = true;
         phys.box.max = (Vector3){0.5, 0.5, 0.5};
         phys.box.min = (Vector3){-0.5, -0.5, -0.5};
         phys.box.max = Vector3Scale(phys.box.max, scale);
@@ -151,34 +153,15 @@ void setup(){
     }
     get_camera()->position = (Vector3){-4,0,5};
     create_wall((Vector3){}, (Vector3){100,100,2.0}, cube_id,RED);
-    create_light((Vector3){0, 0, 8.0}, WHITE, 1.0, 100.0);
-    //create_character((Vector3){0,0,1.2}, (Vector3){1,0,0});
+    //create_light((Vector3){0, 0, 8.0}, WHITE, 1.0, 100.0);
+    create_character((Vector3){0,0,5}, (Vector3){1,0,0});
    //get_transform_comp(0)->transform.rotation =  quat_from_vector(Vector3Normalize(Vector3Negate( get_transform_comp(0)->transform.translation)));
 }
 void on_tick(){
-    if(rand()%10 ==0){
-        for(int i =0; i<rand()%10+2; i++){
-            log_msg("hey toast i love you", 1.0);
-        }
-    }
-
     static u128 frame_count = 0;
     UpdateCamera(get_camera(), CAMERA_FREE);
     if(IsKeyPressed(KEY_ESCAPE)){
         exit(0);
-    }
-
-    Vector3 lc = get_camera()->position;
-    Vector3 t = Vector3Normalize(Vector3Subtract(get_camera()->target, lc));
-    Vector3 end = Vector3Add(Vector3Scale(t, 100),lc);
-    CollisionResult col = line_trace(lc, end);
-    if(col.hit){
-        draw_sphere(col.location,1.0, BLUE);
-        if(IsKeyDown(KEY_X)){
-            destroy_entity(col.hit_id);
-        }
-    } else{
-        draw_sphere(end,1.0, BLUE); 
     }
     frame_count += 1;
 }

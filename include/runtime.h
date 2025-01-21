@@ -148,3 +148,5 @@ void save_level(const char * path);
 CollisionResult line_trace(Vector3 Start,Vector3 End);
 void draw_call(fn_void func);
 void log_msg(char * msg, float duration);
+
+void defer_until_level_exit(fn_void func);

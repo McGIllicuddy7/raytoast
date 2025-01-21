@@ -276,3 +276,6 @@ void register_drawing_system(char * name, void (*fn)()){
 void deregister_drawing_system(char * name){
     cstrVoidFNHashTable_remove(RT.gen_comps.drawing_systems, name);
 }
+void defer_until_level_exit(fn_void func){
+    todo();
+}

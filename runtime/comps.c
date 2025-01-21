@@ -177,7 +177,7 @@ Vector3 get_up_vector(Ref id){
     return Vector3RotateByQuaternion((Vector3){0,0,1}, get_rotation(id));
 }
 Vector3 get_right_vector(Ref id){
-    return Vector3RotateByQuaternion((Vector3){0,1,0}, get_rotation(id));
+    return Vector3RotateByQuaternion((Vector3){0,-1,0}, get_rotation(id));
 }
 
 bool set_model_comp(Ref id, ModelComp model){
@@ -337,7 +337,46 @@ Ref create_light(Vector3 location, Color color, float brightness, float radius){
     return id;
 }
 void update_character(Ref ref, CharacterComp * cmp){
-    add_force(ref, (Vector3){0,0,-1});
+    Vector3 frwrd = get_forward_vector(ref);
+    Vector3 rght = get_right_vector(ref);
+    Vector3 movement = {};
+    float dx = 0.0;
+    float dy = 0.0;
+    Vector2 d_mouse = GetMouseDelta();
+    CollisionResult col = line_trace(Vector3Add(get_location(ref), (Vector3){0,0,get_physics_comp(ref)->box.min.z-0.1}),Vector3Add(get_location(ref), (Vector3){0,0,get_physics_comp(ref)->box.min.z-0.2}));
+    bool grounded = col.hit;
+    if(IsKeyDown(KEY_W)){
+        dx +=1;
+    } 
+    if(IsKeyDown(KEY_S)){
+        dx -=1;
+    }
+    if(IsKeyDown(KEY_A)){
+        dy -=1;
+    }
+    if(IsKeyDown(KEY_D)){
+        dy +=1;
+    }
+    Vector3 rot = QuaternionToEuler(get_transform_comp(ref)->transform.rotation);
+    rot.z -= d_mouse.x/100.0;
+    get_transform_comp(ref)->transform.rotation = QuaternionFromEuler(rot.x, rot.y, rot.z);
+    rot.y = QuaternionToEuler(cmp->control_rotation).y;
+    rot.y += d_mouse.y/100.0;
+    if(rot.y >PI/2-0.0001) rot.y = PI/2-0.0001;
+    if(rot.y<-PI/2+0.0001) rot.y =-PI/2+0.0001;
+    cmp->control_rotation = QuaternionFromEuler(rot.x, rot.y, rot.z);
+    dx*= 10;
+    dy *= 10;
+    movement = Vector3Add(movement, Vector3Scale(frwrd, dx));
+    movement = Vector3Add(movement, Vector3Scale(rght, dy));
+    Vector3 delta =Vector3Subtract(movement, get_physics_comp(ref)->velocity);
+    delta = Vector3Normalize(delta);
+    delta = Vector3Scale(delta, 1.0);
+    add_force(ref, Vector3Scale(delta, 10.0));
+    add_force(ref, (Vector3){0,0,-5});
+    if(IsKeyDown(KEY_SPACE)){
+        add_force(ref, (Vector3){0,0,10});
+    }
 }
 void update_characters(){
     for(int i =0; i<RT.character_comps.length; i++){

@@ -226,7 +226,7 @@ String new_string_wide(Arena * arena,const wchar_t* str);
 
 CTILS_STATIC
 String string_format(Arena * arena, const char * fmt, ...);
-#define tmp_string_format(fmt...) string_format()
+#define tmp_string_format(fmt...) string_format(&temporary_allocator, fmt)
 
 CTILS_STATIC
 String string_random(Arena * arena, int minlen, int maxlen);

@@ -3,7 +3,7 @@
 #include "rlgl.h"
 make_lambda_capture(fn_void, void, draw_line_lambda, {DrawLine3D(captures->start_pos, captures->end_pos, captures->color);},{Vector3 start_pos; Vector3 end_pos; Color color;});
 
-make_lambda_capture(fn_void, void, draw_sphere_lambda, {DrawSphere(captures->center, captures->radius, captures->color); printf("called draw\n");},{Vector3 center; float radius; Color color;});
+make_lambda_capture(fn_void, void, draw_sphere_lambda, {DrawSphere(captures->center, captures->radius, captures->color);},{Vector3 center; float radius; Color color;});
 void draw_line(Vector3 start, Vector3 end, Color color){
     fn_void func = tmp_lambda(draw_line_lambda, {start, end, color});
     draw_call(func);
@@ -74,7 +74,12 @@ void run_drawing(Material mat, Shader default_post_process, void (*on_render)())
         }
         if(RT.camera_parent.is_valid){
             RT.camera.position = get_transform_comp(RT.camera_parent.value)->transform.translation;
-            RT.camera.target = Vector3Add(get_forward_vector(RT.camera_parent.value),RT.camera.position);
+            Vector3 vc = get_forward_vector(RT.camera_parent.value);
+            CharacterComp *char_cmp = get_character_comp(RT.camera_parent.value);
+            if(char_cmp){
+                vc = Vector3RotateByQuaternion((Vector3){1,0,0}, char_cmp->control_rotation);
+            }
+            RT.camera.target = Vector3Add(vc,RT.camera.position);
             RT.camera.up = get_up_vector(RT.camera_parent.value);
         }
         BeginMode3D(RT.camera);
