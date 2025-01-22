@@ -4,6 +4,7 @@
 make_lambda_capture(fn_void, void, draw_line_lambda, {DrawLine3D(captures->start_pos, captures->end_pos, captures->color);},{Vector3 start_pos; Vector3 end_pos; Color color;});
 
 make_lambda_capture(fn_void, void, draw_sphere_lambda, {DrawSphere(captures->center, captures->radius, captures->color);},{Vector3 center; float radius; Color color;});
+make_lambda_capture(fn_void, void, draw_box_lambda, {DrawBoundingBox(captures->box, captures->color);}, {BoundingBox box; Color color;})
 void draw_line(Vector3 start, Vector3 end, Color color){
     fn_void func = tmp_lambda(draw_line_lambda, {start, end, color});
     draw_call(func);
@@ -11,6 +12,10 @@ void draw_line(Vector3 start, Vector3 end, Color color){
 void draw_sphere(Vector3 center_pos,float radius, Color color ){
     fn_void func = tmp_lambda(draw_sphere_lambda, {center_pos, radius, color});
     draw_call(func); 
+}
+void draw_box(BoundingBox bx, Color color){
+    fn_void func = tmp_lambda(draw_box_lambda, {bx,color});
+    draw_call(func);
 }
 
 

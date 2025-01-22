@@ -133,6 +133,7 @@ Vector3 get_up_vector(Ref id);
 Vector3 get_right_vector(Ref id);
 
 Camera3D * get_camera();
+Vector3 get_camera_forward_vector();
 void attach_camera_to(Ref id, Transform relative_trans);
 void detach_camera();
 
@@ -145,7 +146,7 @@ Quaternion quat_from_vector(Vector3 location);
 void load_level(const char * path);
 void save_level(const char * path);
 
-CollisionResult line_trace(Vector3 Start,Vector3 End);
+CollisionResult line_trace(Vector3 Start,Vector3 End, u32 *ignored, size_t ignored_count);
 void draw_call(fn_void func);
 void log_msg(char * msg, float duration);
 

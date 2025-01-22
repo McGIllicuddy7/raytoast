@@ -222,6 +222,9 @@ Entity * get_entity(Ref id){
 Camera3D * get_camera(){
     return &RT.camera;
 }
+Vector3 get_camera_forward_vector(){
+    return Vector3Normalize(Vector3Subtract(get_camera()->target, get_camera()->position));
+}
 
 Vector3 * get_light_direction(){
     return &RT.directional_light_direction;

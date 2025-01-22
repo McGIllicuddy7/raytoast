@@ -1,6 +1,7 @@
 #include "runtime.h"
 #include "default_components.h"
 #include <raymath.h>
+#include "drawing.h"
 bool set_transform_comp(Ref id, TransformComp trans){
     if(id.id>=RT.entities.length){
         return false;
@@ -343,14 +344,11 @@ void update_character(Ref ref, CharacterComp * cmp){
     float dx = 0.0;
     float dy = 0.0;
     Vector2 d_mouse = GetMouseDelta();
-    CollisionResult col = line_trace(Vector3Add(get_location(ref), (Vector3){0,0,get_physics_comp(ref)->box.min.z-0.03}),Vector3Add(get_location(ref), (Vector3){0,0,get_physics_comp(ref)->box.min.z-0.05}));
+    BoundingBox box = get_physics_comp(ref)->box;
+    CollisionResult col = line_trace(Vector3Add(get_location(ref), (Vector3){0,0,0.0}),Vector3Add(get_location(ref), (Vector3){0,0,box.min.z-0.50}), &ref.id, 1);
     bool grounded = col.hit;
     if(grounded){
-        get_transform_comp(ref)->transform.translation.z+= 0.02;
-        get_physics_comp(ref)->velocity.z = 0.0;
-        log_msg("grounded\n",1.0/60.0);
-    } else{
-        log_msg("!grounded\n", 1.0/60.0);
+        get_physics_comp(ref)->velocity.z = 0.0001;
     }
     if(IsKeyDown(KEY_W)){
         dx +=1;
@@ -376,13 +374,16 @@ void update_character(Ref ref, CharacterComp * cmp){
     dy *= 10;
     movement = Vector3Add(movement, Vector3Scale(frwrd, dx));
     movement = Vector3Add(movement, Vector3Scale(rght, dy));
-    Vector3 delta =Vector3Subtract(movement, get_physics_comp(ref)->velocity);
+    Vector3 delta =Vector3Subtract(movement, (Vector3){get_physics_comp(ref)->velocity.x,get_physics_comp(ref)->velocity.y,0.0 });
     delta = Vector3Normalize(delta);
     delta = Vector3Scale(delta, 1.0);
-    add_force(ref, Vector3Scale(delta, 10.0));
-    add_force(ref, (Vector3){0,0,-5});
-    if(IsKeyDown(KEY_SPACE)){
-        add_force(ref, (Vector3){0,0,10});
+    if(grounded){
+        add_force(ref, Vector3Scale(delta, 10.0));
+        if(IsKeyPressed(KEY_SPACE)){
+            add_force(ref, (Vector3){0,0,100});
+        }
+    } else{
+        add_force(ref, (Vector3){0,0,-5});
     }
 }
 void update_characters(){

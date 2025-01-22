@@ -15,6 +15,7 @@ void TestEntity_on_tick(TestEntity * self, float delta_time);
 EntityVTable TestEntityVTable = {.destructor  = default_on_destroy, .on_render = default_on_render, .on_tick = (void*)TestEntity_on_tick, .on_setup = default_on_setup};
 extern char * hello_from_rust(int f);
 extern Entity * create_test_rust_entity();
+static Ref player_id = {};
 float random_float(){
    return GetRandomValue(0,10'000'000)/(10'000'000.0);
 }
@@ -79,12 +80,12 @@ Ref create_wall(Vector3 location, Vector3 scale, u32 mesh_id,Color tin){
     set_physics_comp(id, phys);
     return id;
 }
-void create_character(Vector3 location, Vector3 forward){
+Ref create_character(Vector3 location, Vector3 forward){
     Entity*et = malloc(sizeof(TestEntity));
     et->vtable = &TestEntityVTable;
     Ref ref = create_entity(et).value;
     PhysicsComp phys = {};
-    float sc = .2;
+    float sc = 0.5;
     phys.box.max = (Vector3){sc, sc, sc};
     phys.box.min = (Vector3){-sc, -sc, -sc};
     phys.can_bounce =false;
@@ -98,7 +99,9 @@ void create_character(Vector3 location, Vector3 forward){
     set_physics_comp(ref, phys);
     set_transform_comp(ref, trans);
     set_character_comp(ref, chr);
-    attach_camera_to(ref, transform_default());
+    Transform rel = transform_default();
+    attach_camera_to(ref, rel);
+    return ref;
 }
 void setup(){
     srand(time(0));
@@ -154,15 +157,20 @@ void setup(){
     get_camera()->position = (Vector3){-4,0,5};
     create_wall((Vector3){}, (Vector3){100,100,2.0}, cube_id,RED);
     //create_light((Vector3){0, 0, 8.0}, WHITE, 1.0, 100.0);
-    create_character((Vector3){0,0,5}, (Vector3){1,0,0});
+    player_id = create_character((Vector3){0,0,5}, (Vector3){1,0,0});
    //get_transform_comp(0)->transform.rotation =  quat_from_vector(Vector3Normalize(Vector3Negate( get_transform_comp(0)->transform.translation)));
 }
 void on_tick(){
     static u128 frame_count = 0;
-    UpdateCamera(get_camera(), CAMERA_FREE);
+    //UpdateCamera(get_camera(), CAMERA_FREE);
     if(IsKeyPressed(KEY_ESCAPE)){
         exit(0);
     }
+    Vector3 target = Vector3Add(Vector3Scale(get_camera_forward_vector(),100.0), get_camera()->position);
+    //CollisionResult hit = line_trace(Vector3Add(get_camera()->position, Vector3Scale(get_camera_forward_vector(), 0.6)), target, &player_id.id, 1);
+    //DrawSphere(hit.hit ? hit.location : target, 0.01, BLUE);
+    //String msg = tmp_string_format("%s, {%f, %f,%f}, hit_id: %u, player_id: %u", hit.hit ? "hit": "no hit", hit.hit ? hit.location.x:target.x, hit.hit ? hit.location.y : target.y, hit.hit ? hit.location.z : target.y, hit.hit_id, player_id.id);
+    //log_msg(msg.items, GetFrameTime()/2.0);
     frame_count += 1;
 }
 void on_render(){

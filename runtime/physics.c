@@ -3,6 +3,7 @@
 #include <pthread.h>
 #include <stdbool.h>
 #include <math.h>
+#include "drawing.h"
 #define true 1 
 #define false 0
 //https://iquilezles.org/articles/distfunctions/
@@ -543,10 +544,21 @@ void finish_physics(){
     RT.transform_comps = clone(trans,0);
     RT.physics_comps = clone(phys,0);
 }
-static float max_allowed_distance_array_box(BoundingBox bx, u32Vec cmps){
+static bool u32_slice_contains(u32 * items, size_t count, u32 v){
+    for(int i =0; i<count; i++){
+        if(items[i] == v){
+            return true;
+        }
+    }
+    return false;
+}
+static float max_allowed_distance_array_box(BoundingBox bx, u32Vec cmps,u32* ignored, size_t ignored_count){
     float min = tile_size;
     for(int i = 0; i<cmps.length; i++){
         u32 id1 = cmps.items[i];
+        if(u32_slice_contains(ignored, ignored_count, id1)){
+            continue;
+        }
         if(!trans.items[id1].is_valid){
             continue;
         }
@@ -563,7 +575,7 @@ static float max_allowed_distance_array_box(BoundingBox bx, u32Vec cmps){
     }
     return min;
 }
-static float max_allowed_distance_box(BoundingBox bx){
+static float max_allowed_distance_box(BoundingBox bx,u32* ignored, size_t ignored_count){
     float min = tile_size;
     int count =2;
     Int3 lc = location_to_int3(Vector3Scale(Vector3Add(bx.min, bx.max), 0.5));
@@ -574,7 +586,7 @@ static float max_allowed_distance_box(BoundingBox bx){
                     continue;
                 }
                 u32Vec cmps = TABLE[lc.z+dz][lc.y+dy][lc.x+dx];
-                float fmin = max_allowed_distance_array_box(bx, cmps);
+                float fmin = max_allowed_distance_array_box(bx, cmps, ignored, ignored_count);
                 if(fmin<min){
                     min = fmin;
                 }
@@ -583,21 +595,24 @@ static float max_allowed_distance_box(BoundingBox bx){
     }
     return min;
 }
-static float max_allowed_distance_box_non_opt(BoundingBox bx){
+static float max_allowed_distance_box_non_opt(BoundingBox bx,u32* ignored, size_t ignored_count){
     u32Vec cmps = make_with_cap(0, u32, phys.length/2);
     for(int i =0; i<phys.length; i++){
         if(phys.items[i].is_valid){
             v_append(cmps, i);
         }
     }
-    float dist = max_allowed_distance_array_box(bx, cmps);
+    float dist = max_allowed_distance_array_box(bx, cmps, ignored, ignored_count);
     unmake(cmps);
     return dist;
 }
-static bool check_hit_array_box(BoundingBox bx, Vector3 velocity,u32Vec cmps,Vector3 * normal,u32 * other_hit){
+static bool check_hit_array_box(BoundingBox bx, Vector3 velocity,u32Vec cmps,Vector3 * normal,u32 * other_hit, u32* ignored, size_t ignored_count){
     int count =2;
-    for(int i = 0; i<cmps.length; i++){
+    for(int i = 0; i<cmps.length; i++){  
         u32 id1 = cmps.items[i];
+        if(u32_slice_contains(ignored, ignored_count, id1)){
+            continue;
+        }
         if(!trans.items[id1].is_valid){
             continue;
         }
@@ -620,7 +635,7 @@ static bool check_hit_array_box(BoundingBox bx, Vector3 velocity,u32Vec cmps,Vec
     }
     return false;
 }
-static bool check_hit_box(BoundingBox bx,Vector3 velocity, Vector3 * normal,u32 * other_hit){
+static bool check_hit_box(BoundingBox bx,Vector3 velocity, Vector3 * normal,u32 * other_hit,u32* ignored, size_t ignored_count){
     int count =1;
     Int3 lc = location_to_int3(Vector3Scale(Vector3Add(bx.min, bx.max),0.5));
     bool hit0 = false;
@@ -634,7 +649,7 @@ static bool check_hit_box(BoundingBox bx,Vector3 velocity, Vector3 * normal,u32 
                     hit0 = true;
                 }
                 u32Vec cmps = TABLE[lc.z+dz][lc.y+dy][lc.x+dx];
-                bool hit = check_hit_array_box(bx,velocity, cmps,normal, other_hit);
+                bool hit = check_hit_array_box(bx,velocity, cmps,normal, other_hit, ignored, ignored_count);
                 if(hit){
                     return true;
                 }
@@ -643,18 +658,18 @@ static bool check_hit_box(BoundingBox bx,Vector3 velocity, Vector3 * normal,u32 
     }
     return false;
 }
-static bool check_hit_non_opt_box(BoundingBox box,Vector3 vel,Vector3 * normal, u32 * other_hit){
+static bool check_hit_non_opt_box(BoundingBox box,Vector3 vel,Vector3 * normal, u32 * other_hit,u32* ignored, size_t ignored_count){
     u32Vec cmps = make_with_cap(0, u32, phys.length/2);
     for(int i =0; i<phys.length; i++){
         if(phys.items[i].is_valid){
             v_append(cmps, i);
         }
     }
-    bool hit = check_hit_array_box(box, vel, cmps, normal, other_hit);
+    bool hit = check_hit_array_box(box, vel, cmps, normal, other_hit, ignored, ignored_count);
     unmake(cmps);
     return hit;
 }
- CollisionResult line_trace(Vector3 start, Vector3 end){
+ CollisionResult line_trace(Vector3 start, Vector3 end,u32* ignored, size_t ignored_count){
     if(Vector3Equals(start, end)){
         return (CollisionResult){};
     }
@@ -668,7 +683,8 @@ static bool check_hit_non_opt_box(BoundingBox box,Vector3 vel,Vector3 * normal, 
         Vector3 previous = s;
         Vector3 del = (Vector3){0.001, 0.001, 0.001};
         BoundingBox bx = {Vector3Subtract(s, del), Vector3Add(s, del)};
-        float max_travelled = max_allowed_distance_box(bx);
+        //draw_box(bx, BLUE);
+        float max_travelled = max_allowed_distance_box(bx, ignored, ignored_count);
         bool check = false;
         if(max_travelled<0.0001){
             del = (Vector3){0.01, 0.01, 0.01};
@@ -686,16 +702,18 @@ static bool check_hit_non_opt_box(BoundingBox box,Vector3 vel,Vector3 * normal, 
             Vector3 normal;
             u32 hit;
             bx = (BoundingBox){Vector3Subtract(s, del), Vector3Add(s, del)};
-            if(check_hit_box(bx,norm,&normal,&hit)){
+            if(check_hit_box(bx,norm,&normal,&hit, ignored, ignored_count)){
                 CollisionResult col;
                 col.hit = true;
                 col.hit_id = (Ref){.gen_idx = RT.generations.items[hit], .id = hit};
                 col.normal = normal;
                 col.location = previous;
+                //log_msg(tmp_string_format("%d", fs).items, 0.1);
                 return col;
             }
         }
         trav += max_travelled;
     }
-    return (CollisionResult){};
+    //log_msg(tmp_string_format("%d", fs).items, 0.1);
+    return (CollisionResult){0};
  }
