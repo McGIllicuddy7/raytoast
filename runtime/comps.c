@@ -343,8 +343,15 @@ void update_character(Ref ref, CharacterComp * cmp){
     float dx = 0.0;
     float dy = 0.0;
     Vector2 d_mouse = GetMouseDelta();
-    CollisionResult col = line_trace(Vector3Add(get_location(ref), (Vector3){0,0,get_physics_comp(ref)->box.min.z-0.1}),Vector3Add(get_location(ref), (Vector3){0,0,get_physics_comp(ref)->box.min.z-0.2}));
+    CollisionResult col = line_trace(Vector3Add(get_location(ref), (Vector3){0,0,get_physics_comp(ref)->box.min.z-0.03}),Vector3Add(get_location(ref), (Vector3){0,0,get_physics_comp(ref)->box.min.z-0.05}));
     bool grounded = col.hit;
+    if(grounded){
+        get_transform_comp(ref)->transform.translation.z+= 0.02;
+        get_physics_comp(ref)->velocity.z = 0.0;
+        log_msg("grounded\n",1.0/60.0);
+    } else{
+        log_msg("!grounded\n", 1.0/60.0);
+    }
     if(IsKeyDown(KEY_W)){
         dx +=1;
     } 

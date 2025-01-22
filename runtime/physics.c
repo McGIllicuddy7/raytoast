@@ -666,12 +666,12 @@ static bool check_hit_non_opt_box(BoundingBox box,Vector3 vel,Vector3 * normal, 
     while(trav<=dist){
         fs++;
         Vector3 previous = s;
-        Vector3 del = (Vector3){0.01, 0.01, 0.01};
+        Vector3 del = (Vector3){0.001, 0.001, 0.001};
         BoundingBox bx = {Vector3Subtract(s, del), Vector3Add(s, del)};
         float max_travelled = max_allowed_distance_box(bx);
         bool check = false;
         if(max_travelled<0.0001){
-            del = (Vector3){0.1, 0.1, 0.1};
+            del = (Vector3){0.01, 0.01, 0.01};
             bx = (BoundingBox){Vector3Subtract(s, del), Vector3Add(s, del)};
         }
         if(max_travelled>tile_size){
