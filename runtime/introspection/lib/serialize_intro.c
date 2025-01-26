@@ -1,5 +1,6 @@
 #include "serialize_intro.h"
 #include "cintro.h"
+#include "cereal.h"
 
 ByteVec serialize_object(Arena * arena,void * ptr, ByteVec (*func)(Arena * arena, void *, size_t), size_t size){
     const char * name = find_name_of_ptr(func);
@@ -28,7 +29,7 @@ size_t deserialize_object(Arena *arena,void * writer_buff, void * read_buff){
         reader++;
     }
     size_t (*def)(Arena * arena, void * write_buff, void * read_buff, size_t size);
-    String s = string_format(arena, "_de%s", name+1);
+    String s = string_format(arena, SYM_PREFIX"de%s", name+1);
     def = find_symbol(s.items);
     unmake(s);
     assert(def);

@@ -4,11 +4,17 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#ifdef __linux__
+#include <libelf.h>
+#include <gelf.h>
+#else
 #include <libelf/libelf.h>
 #include <libelf/gelf.h>
+#endif
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+
 static const char * exe_path = "";
 typedef struct {
 	char * items;
@@ -164,7 +170,7 @@ void print_symbol_strings(SymbolTableInternal table){
 }
 void * find_symbol(const char * symbol);
 void symbol_fixups(SymbolTable symbols){
-	void * fixups = find_symbol("_symbol_fixups");
+	void * fixups = find_symbol(SYM_PREFIX"symbol_fixups"); 
 	ssize_t delta =(ssize_t)symbol_fixups- (ssize_t)(fixups);
 	for(int i =0; i<symbols.count; i++){
 		if(symbols.symbols[i].ptr){
@@ -209,7 +215,7 @@ SymbolTable make_symbol_table_elf(const char * path){
         gelf_getsym(data, ii, &sym);
 		out.symbols[ii].ptr = (void*)sym.st_value;
 		char * tmp =  elf_strptr(elf, shdr.sh_link, sym.st_name);
-		size_t tlen = strlen(tmp);
+		size_t tlen = strlen(tmp)+1;
 		char * nw = malloc(tlen);
 		memcpy(nw,tmp, tlen);
     	out.symbols[ii].name =nw;
@@ -235,7 +241,7 @@ void cintro_init(const char * path){
 	symbol_table = symbols;
 	symbol_fixups(symbol_table);
 	//qsort(symbols.symbols, symbols.count, sizeof(Symbol), (void*)cmp_symbols);
-	//print_symbol_table(symbol_table);
+	print_symbol_table(symbol_table);
 
 }
 

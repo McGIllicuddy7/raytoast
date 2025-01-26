@@ -1,5 +1,6 @@
 #pragma once
 #include "utils.h"
+
 typedef struct {
     ByteVec(*func)(Arena * arena,void *, size_t data);
     size_t(*defunc)(Arena * arena,void *write_buff, void *read_buff, size_t size);

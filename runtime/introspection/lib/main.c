@@ -2,7 +2,6 @@
 #include "utils.h"
 #include "cereal.h"
 #include "serialize_intro.h"
-#include "libelf/libelf.h"
 #include <stdio.h>
 
 typedef struct {
