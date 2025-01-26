@@ -5,6 +5,10 @@
 #include <assert.h>
 #include <string.h>
 #include <libelf/libelf.h>
+#include <libelf/gelf.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 static const char * exe_path = "";
 typedef struct {
 	char * items;
@@ -173,16 +177,66 @@ SymbolTableInternal get_symbol_table_internal_macho(ByteArray array){
 	SymbolTableInternal symbols_internal = parse_symbol_table_internal_macho(array, symbol_array);
 	return symbols_internal;
 }
-void cintro_init(const char * path){
-	exe_path= path;
+SymbolTable make_symbol_table_elf(const char * path){
+	SymbolTable out = {};
+	    Elf         *elf;
+    Elf_Scn     *scn = NULL;
+    GElf_Shdr   shdr;
+    Elf_Data    *data;
+    int         fd, ii, count;
+
+    elf_version(EV_CURRENT);
+    fd = open(path, O_RDONLY);
+    elf = elf_begin(fd, ELF_C_READ, NULL);
+    bool found= false;
+    while ((scn = elf_nextscn(elf, scn)) != NULL) {
+        gelf_getshdr(scn, &shdr);
+        printf("%d\n", shdr.sh_type);
+        if (shdr.sh_type == SHT_SYMTAB) {
+            /* found a symbol table, go print it. */
+            found = true;
+            break;
+        }
+    }
+    assert(found);
+    data = elf_getdata(scn, NULL);
+    count = shdr.sh_size / shdr.sh_entsize;
+	out.count = count;
+	out.symbols = calloc(count,sizeof(Symbol));
+    /* print the symbol names */
+    for (ii = 0; ii < count; ++ii) {
+        GElf_Sym sym;
+        gelf_getsym(data, ii, &sym);
+		out.symbols[ii].ptr = (void*)sym.st_value;
+		char * tmp =  elf_strptr(elf, shdr.sh_link, sym.st_name);
+		size_t tlen = strlen(tmp);
+		char * nw = malloc(tlen);
+		memcpy(nw,tmp, tlen);
+    	out.symbols[ii].name =nw;
+    }
+    elf_end(elf);
+    close(fd);
+	return out;
+}
+SymbolTable make_symbol_table_macho(const char * path){
 	ByteArray array = read_file_to_string(path);
 	SymbolTableInternal symbols_internal= get_symbol_table_internal_macho(array);
 	SymbolTable symbols = parse_symbol_table(symbols_internal);
+	free(array.items);
+	return symbols;
+}
+void cintro_init(const char * path){
+	exe_path= path;
+	#ifdef __APPLE__
+	SymbolTable symbols = make_symbol_table_macho(path);
+	#else
+	SymbolTable symbols = make_symbol_table_elf(path);
+	#endif
 	symbol_table = symbols;
 	symbol_fixups(symbol_table);
 	//qsort(symbols.symbols, symbols.count, sizeof(Symbol), (void*)cmp_symbols);
 	//print_symbol_table(symbol_table);
-	free(array.items);
+
 }
 
 void * find_symbol(const char * symbol){
