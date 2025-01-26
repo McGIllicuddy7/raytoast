@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include <libelf/libelf.h>
 static const char * exe_path = "";
 typedef struct {
 	char * items;
@@ -101,7 +102,7 @@ ByteArray get_symbol_table_macho(ByteArray array){
 }
 
 
-SymbolTableInternal parse_symbol_table_internal(ByteArray file, ByteArray table){
+SymbolTableInternal parse_symbol_table_internal_macho(ByteArray file, ByteArray table){
 	ByteArray cmd = get_commands_macho(file);
 	SymbolTableInternal out;
 	out.command_type = *(int*)table.items;
@@ -167,12 +168,15 @@ void symbol_fixups(SymbolTable symbols){
 		}
 	}
 }
-
+SymbolTableInternal get_symbol_table_internal_macho(ByteArray array){
+	ByteArray symbol_array = get_symbol_table_macho(array);
+	SymbolTableInternal symbols_internal = parse_symbol_table_internal_macho(array, symbol_array);
+	return symbols_internal;
+}
 void cintro_init(const char * path){
 	exe_path= path;
 	ByteArray array = read_file_to_string(path);
-	ByteArray symbol_array = get_symbol_table_macho(array);
-	SymbolTableInternal symbols_internal = parse_symbol_table_internal(array, symbol_array);
+	SymbolTableInternal symbols_internal= get_symbol_table_internal_macho(array);
 	SymbolTable symbols = parse_symbol_table(symbols_internal);
 	symbol_table = symbols;
 	symbol_fixups(symbol_table);

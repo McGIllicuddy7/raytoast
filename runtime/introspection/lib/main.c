@@ -2,7 +2,12 @@
 #include "utils.h"
 #include "cereal.h"
 #include "serialize_intro.h"
-
+#include "libelf/libelf.h"
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <libelf/gelf.h>
 typedef struct {
     char * name;
     int ac;
@@ -86,8 +91,44 @@ void read_file(){
     }
     printf("\n");
 }
+
+void test_elf(int argc, const char ** argv){
+    Elf         *elf;
+    Elf_Scn     *scn = NULL;
+    GElf_Shdr   shdr;
+    Elf_Data    *data;
+    int         fd, ii, count;
+
+    elf_version(EV_CURRENT);
+    fd = open(argv[1], O_RDONLY);
+    elf = elf_begin(fd, ELF_C_READ, NULL);
+    bool found= false;
+    while ((scn = elf_nextscn(elf, scn)) != NULL) {
+        gelf_getshdr(scn, &shdr);
+        printf("%d\n", shdr.sh_type);
+        if (shdr.sh_type == SHT_SYMTAB) {
+            /* found a symbol table, go print it. */
+            found = true;
+            break;
+        }
+    }
+    assert(found);
+    data = elf_getdata(scn, NULL);
+    count = shdr.sh_size / shdr.sh_entsize;
+
+    /* print the symbol names */
+    for (ii = 0; ii < count; ++ii) {
+        GElf_Sym sym;
+        gelf_getsym(data, ii, &sym);
+        printf("%s\n", elf_strptr(elf, shdr.sh_link, sym.st_name));
+    }
+    elf_end(elf);
+    close(fd);
+}
 int main(int argc, const char ** argv){
-    srand(time(0));
+    //srand(time(0));
+    //test_elf(argc, argv);
+    //return 0;
     cintro_init(*argv);
     generate();
     read_file();

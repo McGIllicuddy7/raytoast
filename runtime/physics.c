@@ -32,7 +32,7 @@ size_t hash_int3(Int3 i){
 bool Int3_equals(Int3 a, Int3 b){
    return a.x == b.x && a.y == b.y && a.z == b.z;
 }
-#define TABLE_SIZE 64
+#define TABLE_SIZE 72
 static u32Vec TABLE[TABLE_SIZE][TABLE_SIZE][TABLE_SIZE] = {};
 static Arena * phys_arena = 0;
 float tile_size= 1.0;

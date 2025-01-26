@@ -78,9 +78,9 @@ void setup_runtime(void (*setup)(), void(*on_tick)(), void (*on_render)()){
     RT.loaded_shaders = Stringu32HashTable_create(1000, hash_string, string_equals, unmake_string, (void*)no_op_void); 
     RT.textures = ResourceTexture_make(UnloadTexture);
     RT.loaded_textures = Stringu32HashTable_create(1000, hash_string, string_equals, unmake_string,(void*)no_op_void);
-    RT.ambient_color = (Color){64, 64, 64,128};
-    RT.directional_light_color = (Color){128, 64, 58, 255};
-    RT.directional_light_direction = (Vector3){0,0,-1};
+    RT.ambient_color = (Color){48,48,48,255};
+    RT.directional_light_color = (Color){255, 255,255, 255};
+    RT.directional_light_direction = (Vector3){0,-sin(32/M_2_PI),-cos(32/M_2_PI)};
     RT.gen_comps.systems = cstrVoidFNHashTable_create(100, (void*)hash_cstring, (void*)cstr_equals, (void*)no_op_void, (void*)no_op_void);
     RT.gen_comps.graphics_systems = cstrVoidFNHashTable_create(100, (void*)hash_cstring, (void*)cstr_equals, (void*)no_op_void, (void*)no_op_void);
     RT.gen_comps.drawing_systems = cstrVoidFNHashTable_create(100, (void*)hash_cstring, (void*)cstr_equals, (void*)no_op_void, (void*)no_op_void); 

@@ -114,7 +114,7 @@ void setup(){
     msh.model_id = cube_id;
     msh.shader_id = load_shader("shaders/base.vs", "shaders/bsdf.fs");
     msh.tint = GREEN;
-    int max =100;
+    int max =500;
     int movable_amnt = 1;
     int xc = 0;
     int yc = 0;
@@ -178,7 +178,7 @@ void on_render(){
 }
 
 int main(int argc, const char ** argv){
-    //ProfilerStart("dump.txt");
+    ProfilerStart("dump.txt");
     tmp_init();
     init_runtime(setup, on_tick, on_render);
 } 
