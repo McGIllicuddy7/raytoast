@@ -1,3 +1,7 @@
 target/
 a.out
 a.out.*
+
+# Added by cargo
+
+/target
