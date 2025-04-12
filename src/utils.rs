@@ -148,6 +148,21 @@ pub trait StaticReflect:Sized+std::fmt::Debug{
             (out.as_ref().unwrap(), out2.as_ref().unwrap())
         }
     }
+    fn to_bytes(ptr:&u8)->Option<Box<dyn Reflect>>{
+        let t = <Self>::static_reflect();
+        match t.data{
+            TypeData::Enum { variants } => {},
+            TypeData::Struct { fields } => todo!(),
+            TypeData::Pointer { internal } => todo!(),
+            TypeData::Slice { internal } => todo!(),
+            TypeData::Vec { internal } => todo!(),
+            TypeData::Map { key, values } => todo!(),
+            TypeData::Set { values } => todo!(),
+            TypeData::String => todo!(),
+            TypeData::OpaqueType => todo!(),
+        }
+        None
+    }
 }
 impl StaticReflect for i8{}
 impl StaticReflect for i16{}
@@ -325,10 +340,16 @@ impl Reflect for String{
         Self::static_reflect()
     }
 }
+impl <T:Reflect+StaticReflect> Reflect for Vec<T>{
+    fn reflect(&self)->Type {
+        Self::static_reflect()
+    }
+}
 #[derive(Clone)]
 pub struct RegisteredType{
     pub name:&'static str,
     pub to_any_ptr:&'static(dyn Send+Sync+ Fn(&u8)->(&dyn Any,&dyn Reflect)),
+    pub from_bytes:&'static(dyn Send+Sync+Fn(&u8)->Option<Box<dyn Reflect>>),
 }
 pub struct TypeRegistery {
     pub base_types:Mutex<Option<Box<[RegisteredType]>>>,
@@ -349,8 +370,8 @@ impl TypeRegistery{
 }
 #[macro_export]
 macro_rules! as_registered {
-    ($name:ident) => {
-        $crate::utils::RegisteredType{name:std::any::type_name::<$name>(), to_any_ptr:&$name::to_any_ptr}
+    ($name:ty) => {
+        $crate::utils::RegisteredType{name:std::any::type_name::<$name>(), to_any_ptr:&<$name>::to_any_ptr, from_bytes:&<$name>::to_bytes}
     };
 }
 

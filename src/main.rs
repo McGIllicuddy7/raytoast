@@ -15,14 +15,15 @@ pub fn fill() -> ContextRef<'static, [Mutex<usize>; 10]> {
 }
 #[derive(StaticReflect,Reflect,Debug)]
 pub struct Toast{
-    pub name:String,
+    pub name:Vec<String>,
     pub a:usize
 }
 
 
 fn main(){
-    register_types(&[as_registered!(Toast)]);
-    let toast = Toast{name:"lol".to_string(), a:32};
+    register_types(&[as_registered!(Toast),as_registered!(Vec<String>)]);
+    let toast = Toast{name:vec!["lol".to_string()], a:32};
+    println!("{:#?}", toast.reflect());
     for f in toast.fields(){
         let a =  f.reflect;
         println!("{}:{:#?}",f.name,a);
