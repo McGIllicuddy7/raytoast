@@ -23,12 +23,12 @@ fn reflect_struct(name:Ident,data:DataStruct)->TokenStream{
                 tmp.push('<');
             }
         }
-        println!("{tmp}");
-        let msg = format!(" fields.push(crate::utils::Field{{name:\"{}\".to_string(),offset: std::mem::offset_of!(Self,{}), value:{}::static_reflect()}});\n", i.0, i.0,tmp);
+        //println!("{tmp}");
+        let msg = format!(" fields.push(crate::utils::Field{{name:\"{}\".to_string(),offset: std::mem::offset_of!(Self,{}), value:<{}>::static_reflect()}});\n", i.0, i.0,tmp);
         out += &msg;
     }
     out += &format!("crate::utils::Type{{name:(std::any::type_name::<Self>()).to_string(), data:crate::utils::TypeData::Struct{{fields}}, size:std::mem::size_of::<Self>(), align:std::mem::align_of::<Self>()}}}} }}");
-    println!("{out}");
+    //println!("{out}");
     out.parse().unwrap()
 }
 fn reflect_enum(name:Ident, data:DataEnum)->TokenStream{

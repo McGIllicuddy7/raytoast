@@ -220,6 +220,8 @@ impl StaticReflect for String{
         Type { name: type_name::<Self>().to_string(), data:TypeData::String,  size: size_of::<Self>(),      align:align_of::<Self>()}
     }
 }
+impl StaticReflect for (){
+}
 pub struct FieldIter<'a>{
     rf:*const (),
     current:usize, 
@@ -345,6 +347,11 @@ impl <T:Reflect+StaticReflect> Reflect for Vec<T>{
         Self::static_reflect()
     }
 }
+impl Reflect for (){
+    fn reflect(&self)->Type {
+        Self::static_reflect()
+    }
+}
 #[derive(Clone)]
 pub struct RegisteredType{
     pub name:&'static str,
@@ -390,6 +397,7 @@ pub static TYPE_REGISTERY:TypeRegistery = TypeRegistery{base_types:Mutex::new(No
         as_registered!(usize), 
         as_registered!(f32),
         as_registered!(f64),
+        as_registered!(()),
     ];
     let mut base = base_types.as_ref().to_vec();
     for i in types{
